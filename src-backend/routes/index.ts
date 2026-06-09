@@ -1,0 +1,6 @@
+export { default as usuariosRouter } from './usuarios.js'
+export { default as plantasRouter } from './plantas.js'
+export { default as ventasRouter } from './ventas.js'
+export { default as detallesVentaRouter } from './detallesVenta.js'
+export { default as abonasRouter } from './abonos.js'
+export { default as pagosVentaRouter } from './pagosVenta.js'

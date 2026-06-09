@@ -1,0 +1,43 @@
+{
+  "name": "vivero-invergil",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "backend:dev": "tsx watch src-backend/app.ts",
+    "backend:build": "tsc -p src-backend/tsconfig.json",
+    "backend:start": "node dist-backend/app.js",
+    "dev:full": "concurrently \"npm run dev\" \"npm run backend:dev\""
+  },
+  "dependencies": {
+    "@emotion/react": "^11.13.0",
+    "@emotion/styled": "^11.13.0",
+    "@mui/icons-material": "^6.1.0",
+    "@mui/material": "^6.1.0",
+    "axios": "^1.7.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
+    "pg": "^8.21.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "react-router-dom": "^6.26.0",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.9.1",
+    "@vitejs/plugin-react": "^4.3.0",
+    "concurrently": "^9.2.1",
+    "json-server": "^0.17.4",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3",
+    "vite": "^5.4.0"
+  }
+}

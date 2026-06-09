@@ -1,0 +1,285 @@
+{
+  "usuarios": [
+    {
+      "id": 1,
+      "nombre": "Beatriz López Cárdenas",
+      "usuario": "beatriz",
+      "password": "admin123",
+      "rol": "administradora"
+    },
+    {
+      "id": 2,
+      "nombre": "Juan Pérez",
+      "usuario": "juan",
+      "password": "emp123",
+      "rol": "empleado"
+    }
+  ],
+  "plantas": [
+    {
+      "id": 1,
+      "nombre": "Pensamiento",
+      "tipo": "Flor",
+      "cantidad": 4900,
+      "precio": 8.5,
+      "costo_produccion": 3,
+      "costo_compra": 0,
+      "cultivada_vivero": true,
+      "descripcion": "Planta de flor multicolor resistente al frío."
+    },
+    {
+      "id": 2,
+      "nombre": "Viola",
+      "tipo": "Flor",
+      "cantidad": 3168,
+      "precio": 7,
+      "costo_produccion": 2.5,
+      "costo_compra": 0,
+      "cultivada_vivero": true,
+      "descripcion": "Flor pequeña ideal para macetas y jardines."
+    },
+    {
+      "id": 3,
+      "nombre": "Anasalia",
+      "tipo": "Flor",
+      "cantidad": 1500,
+      "precio": 12,
+      "costo_produccion": 0,
+      "costo_compra": 6,
+      "cultivada_vivero": false,
+      "descripcion": "Flor ornamental adquirida de proveedor externo."
+    },
+    {
+      "nombre": "celosia",
+      "tipo": "de sol",
+      "cantidad": 20,
+      "precio": 20,
+      "costo_produccion": 0,
+      "costo_compra": 15,
+      "cultivada_vivero": false,
+      "descripcion": "",
+      "id": 4
+    },
+    {
+      "nombre": "rosa balnca",
+      "tipo": "rosa",
+      "cantidad": 20,
+      "precio": 55,
+      "costo_produccion": 20,
+      "costo_compra": 0,
+      "cultivada_vivero": true,
+      "descripcion": "olor de la rosa blanca",
+      "id": 5
+    }
+  ],
+  "ventas": [
+    {
+      "id": 1,
+      "fecha": "2026-05-10T14:30:00",
+      "total": 8500,
+      "forma_pago": "efectivo",
+      "tipo_venta": "mayoreo",
+      "id_usuario": 1,
+      "nota_remision": "NR-001",
+      "observaciones": "Venta a florería del centro",
+      "anticipo": 0,
+      "monto_pagado": 8500,
+      "saldo_pendiente": 0,
+      "estado": "pagada",
+      "cliente_nombre": "Florería del Centro",
+      "cliente_telefono": "7121234567",
+      "cliente_email": ""
+    },
+    {
+      "fecha": "2026-05-21T15:54:41.063Z",
+      "total": 40,
+      "forma_pago": "efectivo",
+      "tipo_venta": "menudeo",
+      "id_usuario": 1,
+      "nota_remision": "1",
+      "observaciones": "que flojera vender",
+      "anticipo": 20,
+      "monto_pagado": 40,
+      "saldo_pendiente": 0,
+      "estado": "pagada",
+      "cliente_nombre": "Ceci",
+      "cliente_telefono": "",
+      "cliente_email": "",
+      "id": 2
+    },
+    {
+      "fecha": "2026-05-26T13:24:25.221Z",
+      "total": 850,
+      "forma_pago": "transferencia",
+      "tipo_venta": "menudeo",
+      "id_usuario": 1,
+      "nota_remision": "NR-005",
+      "observaciones": "Increible compra",
+      "anticipo": 0,
+      "monto_pagado": 850,
+      "saldo_pendiente": 0,
+      "estado": "pagada",
+      "cliente_nombre": "Francisco",
+      "cliente_telefono": "7122145569",
+      "cliente_email": "pakogmartinez@hotmail.com",
+      "id": 3
+    },
+    {
+      "fecha": "2026-05-26T17:14:13.524Z",
+      "total": 1035,
+      "forma_pago": "efectivo",
+      "tipo_venta": "menudeo",
+      "id_usuario": 1,
+      "nota_remision": "NR-005",
+      "observaciones": "Cliente con anticipo",
+      "anticipo": 300,
+      "monto_pagado": 1035,
+      "saldo_pendiente": 0,
+      "estado": "pagada",
+      "cliente_nombre": "Freddy",
+      "cliente_telefono": "7122556780",
+      "cliente_email": "pakogmartinez@hotmail.com",
+      "id": 4
+    }
+  ],
+  "detalles_venta": [
+    {
+      "id": 1,
+      "id_venta": 1,
+      "id_planta": 1,
+      "cantidad": 1000,
+      "precio_unitario": 8.5,
+      "subtotal": 8500
+    },
+    {
+      "id_venta": 2,
+      "id_planta": 2,
+      "cantidad": 2,
+      "precio_unitario": 20,
+      "subtotal": 40,
+      "id": 2
+    },
+    {
+      "id_venta": 3,
+      "id_planta": 1,
+      "cantidad": 100,
+      "precio_unitario": 8.5,
+      "subtotal": 850,
+      "id": 3
+    },
+    {
+      "id_venta": 4,
+      "id_planta": 5,
+      "cantidad": 15,
+      "precio_unitario": 55,
+      "subtotal": 825,
+      "id": 4
+    },
+    {
+      "id_venta": 4,
+      "id_planta": 2,
+      "cantidad": 30,
+      "precio_unitario": 7,
+      "subtotal": 210,
+      "id": 5
+    }
+  ],
+  "abonos": [
+    {
+      "id": 1,
+      "nombre": "Triple 17",
+      "uso": "Floración general",
+      "cantidad": 50
+    },
+    {
+      "id": 2,
+      "nombre": "Urea",
+      "uso": "Crecimiento vegetativo",
+      "cantidad": 30
+    }
+  ],
+  "pagos_venta": [
+    {
+      "id": 1,
+      "id_venta": 1,
+      "fecha": "2026-05-10T14:30:00",
+      "monto": 8500,
+      "tipo": "pago_completo",
+      "forma_pago": "efectivo",
+      "nota": "Pago total al momento de la venta"
+    },
+    {
+      "id_venta": 2,
+      "fecha": "2026-05-21T15:54:41.203Z",
+      "monto": 20,
+      "tipo": "anticipo",
+      "forma_pago": "efectivo",
+      "nota": "Anticipo inicial de $20.00",
+      "id": 2
+    },
+    {
+      "id_venta": 3,
+      "fecha": "2026-05-26T13:24:25.298Z",
+      "monto": 850,
+      "tipo": "pago_completo",
+      "forma_pago": "transferencia",
+      "nota": "Pago total",
+      "id": 3
+    },
+    {
+      "id_venta": 4,
+      "fecha": "2026-05-26T17:14:13.614Z",
+      "monto": 300,
+      "tipo": "anticipo",
+      "forma_pago": "efectivo",
+      "nota": "Anticipo inicial de $300.00",
+      "id": 4
+    },
+    {
+      "id_venta": 4,
+      "fecha": "2026-05-26T17:16:29.613Z",
+      "monto": 735,
+      "tipo": "pago_final",
+      "forma_pago": "efectivo",
+      "nota": "Pago final — liquidación",
+      "id": 5
+    },
+    {
+      "id_venta": 4,
+      "fecha": "2026-05-26T17:16:33.833Z",
+      "monto": 734,
+      "tipo": "abono",
+      "forma_pago": "efectivo",
+      "nota": "Abono parcial",
+      "id": 6
+    },
+    {
+      "id_venta": 4,
+      "fecha": "2026-05-26T17:16:38.795Z",
+      "monto": 735,
+      "tipo": "pago_final",
+      "forma_pago": "efectivo",
+      "nota": "Pago final — liquidación",
+      "id": 7
+    },
+    {
+      "id_venta": 4,
+      "fecha": "2026-05-28T21:50:43.241Z",
+      "monto": 735,
+      "tipo": "pago_final",
+      "forma_pago": "efectivo",
+      "nota": "Pago final — liquidación",
+      "id": 8
+    },
+    {
+      "id_venta": 2,
+      "fecha": "2026-05-28T21:57:42.478Z",
+      "monto": 20,
+      "tipo": "pago_final",
+      "forma_pago": "efectivo",
+      "nota": "Pago final — liquidación · Cambio: $180.00",
+      "cambio": 180,
+      "id": 9
+    }
+  ]
+}
