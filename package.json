@@ -17,7 +17,10 @@
     "@emotion/styled": "^11.13.0",
     "@mui/icons-material": "^6.1.0",
     "@mui/material": "^6.1.0",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.9.1",
     "axios": "^1.7.0",
+    "concurrently": "^9.2.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
@@ -28,16 +31,13 @@
     "react-dom": "^18.3.0",
     "react-router-dom": "^6.26.0",
     "reflect-metadata": "^0.2.2",
-    "typeorm": "^1.0.0"
+    "tsx": "^4.22.3",
+    "typeorm": "^1.0.0",
+    "typescript": "^6.0.3"
   },
   "devDependencies": {
-    "@types/express": "^5.0.6",
-    "@types/node": "^25.9.1",
     "@vitejs/plugin-react": "^4.3.0",
-    "concurrently": "^9.2.1",
     "json-server": "^0.17.4",
-    "tsx": "^4.22.3",
-    "typescript": "^6.0.3",
     "vite": "^5.4.0"
   }
 }
