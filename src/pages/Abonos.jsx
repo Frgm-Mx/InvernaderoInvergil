@@ -85,8 +85,8 @@ const validar = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Abonos</Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={() => handleOpen()}>Nuevo Abono</Button>
+        <Typography variant="h4">Fertilizantes</Typography>
+        <Button variant="contained" startIcon={<Add />} onClick={() => handleOpen()}>Nuevo Fertilizante</Button>
       </Box>
 
       {msg && <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setMsg('')}>{msg}</Alert>}
@@ -97,7 +97,7 @@ const validar = () => {
           <Table size="small">
             <TableHead>
               <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'grey.50' } }}>
-                <TableCell>Abono</TableCell>
+                <TableCell>Fertilizante</TableCell>
                 <TableCell>Uso</TableCell>
                 <TableCell align="right">Cantidad</TableCell>
                 <TableCell align="center">Acciones</TableCell>
@@ -121,7 +121,7 @@ const validar = () => {
                 </TableRow>
               ))}
               {abonos.length === 0 && (
-                <TableRow><TableCell colSpan={4} align="center" sx={{ py: 4, color: 'text.secondary' }}>No hay abonos</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} align="center" sx={{ py: 4, color: 'text.secondary' }}>No hay Fertilizantes</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -129,7 +129,7 @@ const validar = () => {
       </Card>
 
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>{editId ? 'Editar Abono' : 'Nuevo Abono'}</DialogTitle>
+        <DialogTitle>{editId ? 'Editar Fertilizante' : 'Nuevo Fertilizante'}</DialogTitle>
         <DialogContent sx={{ pt: '16px !important' }}>
           {errores.global && <Alert severity="error" sx={{ mb: 2 }}>{errores.global}</Alert>}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

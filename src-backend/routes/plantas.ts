@@ -1,8 +1,8 @@
 // routes/plantas.routes.js
 import { Router } from 'express'
-import { AppDataSource } from '../database.js'
-import { Planta } from '../entities/Planta.js'
-import { DetalleVenta } from '../entities/DetalleVenta.js'
+import { AppDataSource } from '../database'
+import { Planta } from '../entities/Planta'
+import { DetalleVenta } from '../entities/DetalleVenta'
 
 const router = Router()
 const plantaRepo = AppDataSource.getRepository(Planta)

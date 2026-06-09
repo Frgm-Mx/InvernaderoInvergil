@@ -18,7 +18,7 @@ const menuItems = [
   { text: 'Nueva Venta', icon: <ShoppingCart />, path: '/nueva-venta' },
   { text: 'Ventas', icon: <Receipt />, path: '/ventas' },
   { text: 'Ganancias', icon: <Assessment />, path: '/ganancias' },
-  { text: 'Abonos', icon: <Science />, path: '/abonos' },
+  { text: 'Fertilizantes', icon: <Science />, path: '/abonos' },
   { text: 'Usuarios', icon: <People />, path: '/usuarios', adminOnly: true },
 ]
 

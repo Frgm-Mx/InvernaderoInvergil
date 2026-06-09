@@ -1,6 +1,6 @@
 import { Router } from 'express'
-import { AppDataSource } from '../database.js'
-import { Venta } from '../entities/Venta.js'
+import { AppDataSource } from '../database'
+import { Venta } from '../entities/Venta'
 
 const router = Router()
 const ventaRepo = AppDataSource.getRepository(Venta)
