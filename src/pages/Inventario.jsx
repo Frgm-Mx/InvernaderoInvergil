@@ -44,7 +44,7 @@ const EMPTY = {
   costo_compra: "",
   cultivada_vivero: true,
   descripcion: "",
-  activo: true, // Nuevo campo
+  activo: true,
 };
 
 export default function Inventario() {
@@ -55,14 +55,14 @@ export default function Inventario() {
   const [errores, setErrores] = useState({});
   const [msg, setMsg] = useState("");
   const [errorGlobal, setErrorGlobal] = useState("");
+  const [costoTotal, setCostoTotal] = useState("");
 
   const [busqueda, setBusqueda] = useState("");
   const [orden, setOrden] = useState("recientes");
-  const [mostrarInactivas, setMostrarInactivas] = useState(false); // Nuevo filtro
+  const [mostrarInactivas, setMostrarInactivas] = useState(false);
 
   const load = async () => {
     try {
-      // Cargar todas las plantas (incluyendo inactivas)
       const todas = await PlantaService.getAllIncludingInactive?.() || await PlantaService.getAll();
       setPlantas(todas);
     } catch {
@@ -74,17 +74,28 @@ export default function Inventario() {
     load();
   }, []);
 
+  // Sincronizar costo total cuando cambian cantidad o costo unitario
+  useEffect(() => {
+    const cantidad = Number(form.cantidad) || 0;
+    const costoUnitario = form.cultivada_vivero
+      ? Number(form.costo_produccion) || 0
+      : Number(form.costo_compra) || 0;
+    
+    if (cantidad > 0 && costoUnitario > 0) {
+      setCostoTotal((cantidad * costoUnitario).toFixed(2));
+    } else {
+      setCostoTotal("");
+    }
+  }, [form.cantidad, form.costo_produccion, form.costo_compra, form.cultivada_vivero]);
+
   const plantasProcesadas = plantas
     .filter((p) => {
-      // Filtro por búsqueda
       const matchBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase().trim());
-      // Filtro por estado (activo/inactivo)
       const matchEstado = mostrarInactivas ? true : (p.activo !== false);
       return matchBusqueda && matchEstado;
     })
     .sort((a, b) => (orden === "recientes" ? b.id - a.id : a.id - b.id));
 
-  // Verificar si una planta tiene ventas asociadas
   const verificarSiTieneVentas = async (idPlanta) => {
     try {
       const response = await PlantaService.tieneVentas?.(idPlanta);
@@ -95,7 +106,6 @@ export default function Inventario() {
     }
   };
 
-  // Deshabilitar planta (eliminación lógica)
   const deshabilitarPlanta = async (id) => {
     try {
       await PlantaService.deshabilitar?.(id);
@@ -106,7 +116,6 @@ export default function Inventario() {
     }
   };
 
-  // Reactivar planta
   const reactivarPlanta = async (id) => {
     try {
       await PlantaService.reactivar?.(id);
@@ -117,7 +126,6 @@ export default function Inventario() {
     }
   };
 
-  // Eliminar planta permanentemente (solo si no tiene ventas)
   const eliminarPlantaPermanentemente = async (id) => {
     try {
       await PlantaService.delete(id);
@@ -135,7 +143,6 @@ export default function Inventario() {
     const tieneVentas = await verificarSiTieneVentas(id);
     
     if (tieneVentas) {
-      // Si tiene ventas, solo permitir deshabilitar
       const confirmar = window.confirm(
         `⚠️ ADVERTENCIA: La planta "${planta.nombre}" tiene ventas registradas.\n\n` +
         `Si la deshabilitas, ya no aparecerá en nuevas ventas pero se mantendrá en el historial.\n\n` +
@@ -146,7 +153,6 @@ export default function Inventario() {
         await deshabilitarPlanta(id);
       }
     } else {
-      // Si no tiene ventas, se puede eliminar físicamente
       const confirmar = window.confirm(
         `¿Eliminar "${planta.nombre}" permanentemente?\n` +
         `Esta acción no se puede deshacer.`
@@ -158,7 +164,6 @@ export default function Inventario() {
     }
   };
 
-  // --- VALIDACIÓN EN TIEMPO REAL CAMPO POR CAMPO ---
   const validarCampo = (name, value, formularioActual) => {
     const errs = { ...errores };
 
@@ -173,7 +178,7 @@ export default function Inventario() {
           (p) =>
             p.nombre.trim().toLowerCase() === val.toLowerCase() &&
             p.id !== editId &&
-            p.activo !== false // Solo comparar con activas
+            p.activo !== false
         );
         if (existe) {
           errs.nombre = "Esta planta ya existe en el inventario";
@@ -277,9 +282,15 @@ export default function Inventario() {
     if (planta) {
       setForm({ ...planta });
       setEditId(planta.id);
+      const cantidad = Number(planta.cantidad) || 0;
+      const costoUnitario = planta.cultivada_vivero 
+        ? Number(planta.costo_produccion) || 0 
+        : Number(planta.costo_compra) || 0;
+      setCostoTotal((cantidad * costoUnitario).toFixed(2));
     } else {
       setForm(EMPTY);
       setEditId(null);
+      setCostoTotal("");
     }
     setOpen(true);
     setErrores({});
@@ -298,8 +309,9 @@ export default function Inventario() {
 
   const handleCostoTotalChange = (e) => {
     const totalInput = e.target.value;
+    setCostoTotal(totalInput);
+    
     const cantidad = Number(form.cantidad) || 0;
-
     const campoDestino = form.cultivada_vivero
       ? "costo_produccion"
       : "costo_compra";
@@ -310,7 +322,7 @@ export default function Inventario() {
     }
 
     const totalNum = Number(totalInput);
-    if (cantidad > 0 && !isNaN(totalNum)) {
+    if (cantidad > 0 && !isNaN(totalNum) && totalNum > 0) {
       const unitarioCalculado = (totalNum / cantidad).toFixed(2);
       setForm((f) => {
         const nuevoForm = { ...f, [campoDestino]: unitarioCalculado };
@@ -377,7 +389,6 @@ export default function Inventario() {
     }
   };
 
-  // Cálculos dinámicos auxiliares
   const cantidadActual = Number(form.cantidad) || 0;
   const costoUnitarioActual = form.cultivada_vivero
     ? Number(form.costo_produccion) || 0
@@ -617,7 +628,7 @@ export default function Inventario() {
         </TableContainer>
       </Card>
 
-      {/* Dialog crear/editar - igual que antes */}
+      {/* Dialog crear/editar */}
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
@@ -652,14 +663,26 @@ export default function Inventario() {
             />
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
-                label="Cantidad *" name="cantidad" type="number" value={form.cantidad} onChange={handleChange}
-                error={!!errores.cantidad} helperText={errores.cantidad} inputProps={{ min: 0, step: 1 }}
+                label="Cantidad *" 
+                name="cantidad" 
+                type="number" 
+                value={form.cantidad} 
+                onChange={handleChange}
+                error={!!errores.cantidad} 
+                helperText={errores.cantidad} 
+                inputProps={{ min: 0, step: 1 }}
                 fullWidth
               />
               <Box sx={{ width: '100%' }}>
                 <TextField
-                  label="Precio Venta *" name="precio" type="number" value={form.precio} onChange={handleChange}
-                  error={!!errores.precio} helperText={errores.precio} inputProps={{ step: 0.5, min: 0.5 }}
+                  label="Precio Venta *" 
+                  name="precio" 
+                  type="number" 
+                  value={form.precio} 
+                  onChange={handleChange}
+                  error={!!errores.precio} 
+                  helperText={errores.precio} 
+                  inputProps={{ step: 0.5, min: 0.5 }}
                   fullWidth
                 />
                 {precioSugerido && (
@@ -726,14 +749,10 @@ export default function Inventario() {
                 type="number"
                 fullWidth
                 inputProps={{ step: "any" }}
-                value={
-                  cantidadActual > 0 && costoUnitarioActual > 0
-                    ? (cantidadActual * costoUnitarioActual).toFixed(2)
-                    : ""
-                }
+                value={costoTotal}
                 onChange={handleCostoTotalChange}
                 InputLabelProps={{ shrink: true }}
-                helperText="Opcional: Escribe aquí el total para autocalcular el unitario"
+                helperText="Escribe aquí el total para autocalcular el unitario"
               />
             </Box>
 
