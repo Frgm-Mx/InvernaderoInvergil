@@ -79,24 +79,32 @@ export default function Ventas() {
   const [pagoSaving, setPagoSaving] = useState(false);
 
   const load = async () => {
-    const [v, p] = await Promise.all([
-      VentaService.getAll(),
-      PlantaService.getAll(),
-    ]);
-    setVentas(v);
-    setPlantas(p);
+    try {
+      const [v, p] = await Promise.all([
+        VentaService.getAll(),
+        PlantaService.getAll(),
+      ]);
+      setVentas(v);
+      setPlantas(p);
+    } catch (error) {
+      console.error("Error cargando datos:", error);
+    }
   };
 
   useEffect(() => {
     const loadAll = async () => {
-      const [v, p] = await Promise.all([
-        VentaService.getAll(),
-        PlantaService.getAllIncludingInactive(),
-      ]);
-      setVentas(v);
-      setTodasLasPlantas(p);
+      try {
+        const [v, p] = await Promise.all([
+          VentaService.getAll(),
+          PlantaService.getAllIncludingInactive(),
+        ]);
+        setVentas(v);
+        setTodasLasPlantas(p);
+      } catch (error) {
+        console.error("Error cargando datos:", error);
+      }
     };
-    loadAll().catch(() => {});
+    loadAll();
   }, []);
 
   const filtered =
@@ -123,11 +131,9 @@ export default function Ventas() {
         PagoVentaService.getByVenta(ventaId),
       ]);
       
-      if (ventaSel?.id === ventaId || !ventaSel) {
-        setDetalles(d || []);
-        setPagos(p || []);
-        setVentaSel(venta);
-      }
+      setDetalles(d || []);
+      setPagos(p || []);
+      setVentaSel(venta);
     } catch (error) {
       console.error('Error cargando detalles:', error);
       setDetalles([]);
@@ -137,7 +143,6 @@ export default function Ventas() {
     }
   };
 
-  // Función para ver ticket (sin descargar)
   const verTicket = async (venta) => {
     setVentaActual(venta);
     setCargandoTicket(true);
@@ -158,7 +163,7 @@ export default function Ventas() {
         venta: venta,
         detalles: detallesConNombre,
         pagos: p,
-        vendedor: user?.nombre || "Admin"
+        vendedor: venta.id_usuario?.nombre || "Admin"
       });
       
       setTicketPreviewData(doc.output("datauristring"));
@@ -171,7 +176,6 @@ export default function Ventas() {
     }
   };
 
-  // Función para descargar factura directamente
   const descargarFacturaDirecto = async (venta) => {
     try {
       const [d, p] = await Promise.all([
@@ -184,7 +188,7 @@ export default function Ventas() {
         nombre_planta: getNombrePlanta(det.id_planta)
       }));
       
-      await descargarFactura(venta, detallesConNombre, p, user?.nombre);
+      await descargarFactura(venta, detallesConNombre, p, venta.id_usuario?.nombre || "Admin");
     } catch (error) {
       console.error("Error:", error);
       alert("Error al generar la factura");
@@ -207,6 +211,7 @@ export default function Ventas() {
   };
 
   const formatFecha = (f) => {
+    if (!f) return '—';
     const d = new Date(f);
     return d.toLocaleDateString("es-MX", {
       day: "2-digit",
@@ -225,12 +230,12 @@ export default function Ventas() {
 
   const handleDescargarTicket = () => {
     if (ventaSel)
-      descargarTicket(ventaSel, getDetallesConNombre(), pagos, user?.nombre);
+      descargarTicket(ventaSel, getDetallesConNombre(), pagos, ventaSel.id_usuario?.nombre || "Admin");
   };
 
   const handleDescargarFactura = () => {
     if (ventaSel)
-      descargarFactura(ventaSel, getDetallesConNombre(), pagos, user?.nombre);
+      descargarFactura(ventaSel, getDetallesConNombre(), pagos, ventaSel.id_usuario?.nombre || "Admin");
   };
 
   const handleEnviarCorreo = () => {
@@ -239,7 +244,7 @@ export default function Ventas() {
         ventaSel,
         getDetallesConNombre(),
         pagos,
-        user?.nombre,
+        ventaSel.id_usuario?.nombre || "Admin",
         ventaSel.cliente_email,
       );
   };
@@ -373,6 +378,7 @@ export default function Ventas() {
                 <TableCell>#</TableCell>
                 <TableCell>Fecha</TableCell>
                 <TableCell>Cliente</TableCell>
+                <TableCell>Vendedor</TableCell>
                 <TableCell align="right">Total</TableCell>
                 <TableCell>Pago</TableCell>
                 <TableCell>Estado</TableCell>
@@ -386,6 +392,7 @@ export default function Ventas() {
                   <TableCell>{v.id}</TableCell>
                   <TableCell>{formatFecha(v.fecha)}</TableCell>
                   <TableCell>{v.cliente_nombre || "Público general"}</TableCell>
+                  <TableCell>{v.id_usuario?.nombre || "—"}</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600 }}>
                     $
                     {Number(v.total).toLocaleString("es-MX", {
@@ -436,7 +443,7 @@ export default function Ventas() {
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     align="center"
                     sx={{ py: 4, color: "text.secondary" }}
                   >
@@ -490,6 +497,9 @@ export default function Ventas() {
                   </Typography>
                   <Typography variant="body2">
                     Cliente: {ventaSel.cliente_nombre || "Público general"}
+                  </Typography>
+                  <Typography variant="body2">
+                    Vendedor: {ventaSel.id_usuario?.nombre || "—"}
                   </Typography>
                   <Typography variant="body2">
                     Pago: {ventaSel.forma_pago} · Tipo: {ventaSel.tipo_venta}
@@ -630,7 +640,7 @@ export default function Ventas() {
         </DialogActions>
       </Dialog>
 
-      {/* DIALOG PARA VER TICKET (sin descargar) */}
+      {/* DIALOG PARA VER TICKET */}
       <Dialog
         open={ticketPreviewOpen}
         onClose={() => setTicketPreviewOpen(false)}
@@ -681,7 +691,7 @@ export default function Ventas() {
             startIcon={<Receipt />} 
             onClick={() => {
               if (ventaActual) {
-                descargarTicket(ventaActual, getDetallesConNombre(), pagos, user?.nombre);
+                descargarTicket(ventaActual, getDetallesConNombre(), pagos, ventaActual.id_usuario?.nombre || "Admin");
               }
             }}
           >
@@ -693,7 +703,7 @@ export default function Ventas() {
               startIcon={<Email />} 
               onClick={() => {
                 if (ventaActual) {
-                  enviarPorCorreo(ventaActual, getDetallesConNombre(), pagos, user?.nombre, ventaActual.cliente_email);
+                  enviarPorCorreo(ventaActual, getDetallesConNombre(), pagos, ventaActual.id_usuario?.nombre || "Admin", ventaActual.cliente_email);
                 }
               }}
               color="info"

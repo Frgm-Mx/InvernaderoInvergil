@@ -70,6 +70,8 @@ export default function NuevaVenta() {
   const [clienteNombre, setClienteNombre] = useState("");
   const [clienteTelefono, setClienteTelefono] = useState("");
   const [clienteEmail, setClienteEmail] = useState("");
+  const [descuento, setDescuento] = useState(0);
+  const [aplicaDescuento, setAplicaDescuento] = useState(false);
 
   const [esAnticipo, setEsAnticipo] = useState(false);
   const [montoAnticipo, setMontoAnticipo] = useState("");
@@ -251,12 +253,15 @@ export default function NuevaVenta() {
     (Number(l.cantidad) || 0) * (Number(l.precio_unitario) || 0);
 
   const totalCantidad = useMemo(() => {
-    return lineas.reduce((s, l) => s + (Number(l.cantidad) || 0), 0);
+    const cantidad = lineas.reduce((s, l) => s + (Number(l.cantidad) || 0), 0);
+    setAplicaDescuento(cantidad >= 1000);
+    return cantidad;
   }, [lineas]);
 
   const total = useMemo(() => {
-    return lineas.reduce((s, l) => s + calcSubtotal(l), 0);
-  }, [lineas]);
+    const subtotal = lineas.reduce((s, l) => s + calcSubtotal(l), 0);
+    return aplicaDescuento ? subtotal * 0.9 : subtotal; // 10% descuento
+  }, [lineas, aplicaDescuento]);
 
   const tipoVenta = totalCantidad >= 1000 ? "mayoreo" : "menudeo";
 
@@ -1105,6 +1110,35 @@ export default function NuevaVenta() {
                       >
                         Cambio al Cliente: ${cambio.toFixed(2)}
                       </Typography>
+                      {/* Descuento por Mayoreo (más de 1000 plantas) */}
+                      {totalCantidad >= 1000 && (
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            bgcolor: "#e3f2fd",
+                            p: 1.2,
+                            borderRadius: 1,
+                            mt: 1.5,
+                            border: "1px solid #90caf9",
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            color="primary.dark"
+                            fontWeight={600}
+                          >
+                            🌿 Descuento por Mayoreo (10%)
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            color="primary.dark"
+                            fontWeight={700}
+                          >
+                            -${((total / 0.9) * 0.1).toFixed(2)}
+                          </Typography>
+                        </Box>
+                      )}
                     </Box>
                   )}
               </Box>

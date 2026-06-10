@@ -117,9 +117,15 @@ export function generarTicketPDF({ venta, detalles, pagos = [], vendedor = '' })
     y += 3.5
 
     doc.setFont('helvetica', 'normal')
-    doc.text('Anticipo:', margen, y)
-    doc.text(`$${Number(venta.anticipo || 0).toFixed(2)}`, W - margen, y, { align: 'right' })
+    doc.text('Pagó:', margen, y)
+    doc.text(`$${Number(venta.monto_pagado || 0).toFixed(2)}`, W - margen, y, { align: 'right' })
     y += 3.2
+
+    if (cambio > 0) {
+      doc.text('Cambio:', margen, y)
+      doc.text(`$${cambio.toFixed(2)}`, W - margen, y, { align: 'right' })
+      y += 3.2
+    }
 
     doc.text('Pagado:', margen, y)
     doc.text(`$${Number(venta.monto_pagado || 0).toFixed(2)}`, W - margen, y, { align: 'right' })
@@ -391,10 +397,10 @@ export async function descargarTicket(venta, detalles, pagos, vendedor) {
       alert("Error: No se pudo identificar el ID de la venta.");
       return;
     }
-    
+
     const ventaNormalizada = { ...venta, id: idVenta };
     const doc = generarTicketPDF({ venta: ventaNormalizada, detalles, pagos, vendedor });
-    
+
     doc.save(`ticket_${idVenta}.pdf`);
     alert(`✓ Ticket descargado: ticket_${idVenta}.pdf`);
   } catch (error) {
@@ -413,10 +419,10 @@ export async function descargarFactura(venta, detalles, pagos, vendedor) {
       alert("Error: No se pudo identificar el ID de la venta.");
       return;
     }
-    
+
     const ventaNormalizada = { ...venta, id: idVenta };
     const doc = generarFacturaPDF({ venta: ventaNormalizada, detalles, pagos, vendedor });
-    
+
     doc.save(`factura_${idVenta}.pdf`);
     alert(`✓ Factura descargada: factura_${idVenta}.pdf`);
   } catch (error) {
@@ -435,18 +441,18 @@ export async function enviarPorCorreo(venta, detalles, pagos, vendedor, email = 
       alert("Error: No se pudo identificar el ID de la venta.");
       return;
     }
-    
+
     if (!email) {
       alert("Error: No hay correo electrónico registrado para este cliente.");
       return;
     }
-    
+
     const ventaNormalizada = { ...venta, id: idVenta };
     const doc = generarFacturaPDF({ venta: ventaNormalizada, detalles, pagos, vendedor });
-    
+
     // Descargar una copia local que el usuario podrá adjuntar
     doc.save(`factura_${idVenta}_para_envio.pdf`);
-    
+
     // Abrir cliente de correo
     const numTicket = String(idVenta).padStart(4, '0');
     const asunto = encodeURIComponent(`Factura #${numTicket} - Vivero Invergil`);
@@ -457,10 +463,10 @@ export async function enviarPorCorreo(venta, detalles, pagos, vendedor, email = 
       `Gracias por su preferencia.\n\n` +
       `Atentamente,\nVivero Invergil`
     );
-    
+
     const mailto = `mailto:${email}?subject=${asunto}&body=${cuerpo}`;
     window.open(mailto, '_blank');
-    
+
     alert(`✓ Se ha abierto su cliente de correo.\n\nPor favor adjunte el archivo "factura_${idVenta}_para_envio.pdf" que se acaba de descargar.`);
   } catch (error) {
     console.error('Error:', error);

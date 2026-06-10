@@ -23,6 +23,7 @@ import {
 import { Add, Edit, Delete, PersonOutline } from "@mui/icons-material";
 import UsuarioService from "../services/UsuarioService";
 import { useAuth } from "../auth/AuthContext";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 
 const EMPTY = { nombre: "", usuario: "", password: "", rol: "empleado" };
 
@@ -36,6 +37,7 @@ export default function Usuarios() {
   const [errorGlobal, setErrorGlobal] = useState("");
   const { user } = useAuth();
   const esAdmin = user?.rol === "administradora" || user?.rol === "admin";
+  const [showPassword, setShowPassword] = useState(false);
 
   const load = async () => {
     try {
@@ -272,11 +274,23 @@ export default function Usuarios() {
                   : "Contraseña *"
               }
               name="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={form.password}
               onChange={handleChange}
               error={!!errores.password}
               helperText={errores.password}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPassword(!showPassword)}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
             <TextField
               select
