@@ -436,7 +436,14 @@ export default function NuevaVenta() {
         formaPago === "efectivo" && !esAnticipo
           ? Math.max(0, Number(montoPagado) - total)
           : 0;
-      const montoPagadoVal = esAnticipo ? anticipoMonto : total;
+      let montoPagadoVal;
+      if (esAnticipo) {
+        montoPagadoVal = anticipoMonto;
+      } else if (formaPago === "efectivo") {
+        montoPagadoVal = Number(montoPagado); // El cliente pagó esto en efectivo
+      } else {
+        montoPagadoVal = total; // Transferencia paga el total exacto
+      }
       const saldoPendiente = total - montoPagadoVal;
 
       // 1. Crear venta en Backend (la nota de remisión la genera el backend)
