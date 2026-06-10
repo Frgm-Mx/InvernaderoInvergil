@@ -40,9 +40,9 @@ export default function Layout() {
     navigate('/login')
   }
 
-  const filteredMenu = menuItems.filter(
-    (item) => !item.adminOnly || user?.rol === 'administradora'
-  )
+const filteredMenu = menuItems.filter(
+  (item) => !item.adminOnly || (user?.rol === 'administradora' || user?.rol === 'admin')
+)
 
   const drawer = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

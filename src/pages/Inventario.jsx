@@ -34,6 +34,7 @@ import {
   Restore,
 } from "@mui/icons-material";
 import PlantaService from "../services/PlantaService";
+import { useAuth } from "../auth/AuthContext";
 
 const EMPTY = {
   nombre: "",
@@ -48,6 +49,8 @@ const EMPTY = {
 };
 
 export default function Inventario() {
+  const { user } = useAuth();
+  const esAdmin = user?.rol === "administradora" || user?.rol === "admin";
   const [plantas, setPlantas] = useState([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
@@ -63,7 +66,9 @@ export default function Inventario() {
 
   const load = async () => {
     try {
-      const todas = await PlantaService.getAllIncludingInactive?.() || await PlantaService.getAll();
+      const todas =
+        (await PlantaService.getAllIncludingInactive?.()) ||
+        (await PlantaService.getAll());
       setPlantas(todas);
     } catch {
       setErrorGlobal("Error al cargar inventario");
@@ -80,18 +85,25 @@ export default function Inventario() {
     const costoUnitario = form.cultivada_vivero
       ? Number(form.costo_produccion) || 0
       : Number(form.costo_compra) || 0;
-    
+
     if (cantidad > 0 && costoUnitario > 0) {
       setCostoTotal((cantidad * costoUnitario).toFixed(2));
     } else {
       setCostoTotal("");
     }
-  }, [form.cantidad, form.costo_produccion, form.costo_compra, form.cultivada_vivero]);
+  }, [
+    form.cantidad,
+    form.costo_produccion,
+    form.costo_compra,
+    form.cultivada_vivero,
+  ]);
 
   const plantasProcesadas = plantas
     .filter((p) => {
-      const matchBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase().trim());
-      const matchEstado = mostrarInactivas ? true : (p.activo !== false);
+      const matchBusqueda = p.nombre
+        .toLowerCase()
+        .includes(busqueda.toLowerCase().trim());
+      const matchEstado = mostrarInactivas ? true : p.activo !== false;
       return matchBusqueda && matchEstado;
     })
     .sort((a, b) => (orden === "recientes" ? b.id - a.id : a.id - b.id));
@@ -101,7 +113,7 @@ export default function Inventario() {
       const response = await PlantaService.tieneVentas?.(idPlanta);
       return response?.tieneVentas || false;
     } catch (error) {
-      console.error('Error verificando ventas:', error);
+      console.error("Error verificando ventas:", error);
       return false;
     }
   };
@@ -112,7 +124,7 @@ export default function Inventario() {
       setMsg(`✓ Planta deshabilitada correctamente`);
       load();
     } catch (error) {
-      setErrorGlobal(error.response?.data?.error || 'Error al deshabilitar');
+      setErrorGlobal(error.response?.data?.error || "Error al deshabilitar");
     }
   };
 
@@ -122,7 +134,7 @@ export default function Inventario() {
       setMsg(`✓ Planta reactivada correctamente`);
       load();
     } catch (error) {
-      setErrorGlobal(error.response?.data?.error || 'Error al reactivar');
+      setErrorGlobal(error.response?.data?.error || "Error al reactivar");
     }
   };
 
@@ -132,32 +144,32 @@ export default function Inventario() {
       setMsg(`✓ Planta eliminada permanentemente`);
       load();
     } catch (error) {
-      setErrorGlobal(error.response?.data?.error || 'Error al eliminar');
+      setErrorGlobal(error.response?.data?.error || "Error al eliminar");
     }
   };
 
   const handleDelete = async (id) => {
-    const planta = plantas.find(p => p.id === id);
+    const planta = plantas.find((p) => p.id === id);
     if (!planta) return;
-    
+
     const tieneVentas = await verificarSiTieneVentas(id);
-    
+
     if (tieneVentas) {
       const confirmar = window.confirm(
         `⚠️ ADVERTENCIA: La planta "${planta.nombre}" tiene ventas registradas.\n\n` +
-        `Si la deshabilitas, ya no aparecerá en nuevas ventas pero se mantendrá en el historial.\n\n` +
-        `¿Deseas deshabilitar esta planta?`
+          `Si la deshabilitas, ya no aparecerá en nuevas ventas pero se mantendrá en el historial.\n\n` +
+          `¿Deseas deshabilitar esta planta?`,
       );
-      
+
       if (confirmar) {
         await deshabilitarPlanta(id);
       }
     } else {
       const confirmar = window.confirm(
         `¿Eliminar "${planta.nombre}" permanentemente?\n` +
-        `Esta acción no se puede deshacer.`
+          `Esta acción no se puede deshacer.`,
       );
-      
+
       if (confirmar) {
         await eliminarPlantaPermanentemente(id);
       }
@@ -178,7 +190,7 @@ export default function Inventario() {
           (p) =>
             p.nombre.trim().toLowerCase() === val.toLowerCase() &&
             p.id !== editId &&
-            p.activo !== false
+            p.activo !== false,
         );
         if (existe) {
           errs.nombre = "Esta planta ya existe en el inventario";
@@ -283,8 +295,8 @@ export default function Inventario() {
       setForm({ ...planta });
       setEditId(planta.id);
       const cantidad = Number(planta.cantidad) || 0;
-      const costoUnitario = planta.cultivada_vivero 
-        ? Number(planta.costo_produccion) || 0 
+      const costoUnitario = planta.cultivada_vivero
+        ? Number(planta.costo_produccion) || 0
         : Number(planta.costo_compra) || 0;
       setCostoTotal((cantidad * costoUnitario).toFixed(2));
     } else {
@@ -310,7 +322,7 @@ export default function Inventario() {
   const handleCostoTotalChange = (e) => {
     const totalInput = e.target.value;
     setCostoTotal(totalInput);
-    
+
     const cantidad = Number(form.cantidad) || 0;
     const campoDestino = form.cultivada_vivero
       ? "costo_produccion"
@@ -393,7 +405,8 @@ export default function Inventario() {
   const costoUnitarioActual = form.cultivada_vivero
     ? Number(form.costo_produccion) || 0
     : Number(form.costo_compra) || 0;
-  const precioSugerido = costoUnitarioActual > 0 ? (costoUnitarioActual * 1.40).toFixed(2) : null;
+  const precioSugerido =
+    costoUnitarioActual > 0 ? (costoUnitarioActual * 1.4).toFixed(2) : null;
 
   return (
     <Box>
@@ -422,6 +435,7 @@ export default function Inventario() {
           startIcon={<Add />}
           onClick={() => handleOpen()}
           color="success"
+          disabled={!esAdmin}
         >
           Nueva Planta
         </Button>
@@ -530,14 +544,14 @@ export default function Inventario() {
                   : p.costo_compra;
                 const cTotal = p.cantidad * cUnitario;
                 const isActive = p.activo !== false;
-                
+
                 return (
-                  <TableRow 
-                    key={p.id} 
-                    hover 
-                    sx={{ 
+                  <TableRow
+                    key={p.id}
+                    hover
+                    sx={{
                       opacity: isActive ? 1 : 0.6,
-                      backgroundColor: !isActive ? 'action.hover' : 'inherit'
+                      backgroundColor: !isActive ? "action.hover" : "inherit",
                     }}
                   >
                     <TableCell>
@@ -594,20 +608,39 @@ export default function Inventario() {
                       />
                     </TableCell>
                     <TableCell align="center">
-                      <Tooltip title={isActive ? "Editar" : "Ver detalles"}>
-                        <IconButton size="small" onClick={() => handleOpen(p)}>
-                          <Edit fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={isActive ? "Deshabilitar" : "Reactivar"}>
-                        <IconButton
-                          size="small"
-                          color={isActive ? "error" : "success"}
-                          onClick={() => handleDelete(p.id)}
-                        >
-                          {isActive ? <Delete fontSize="small" /> : <Restore fontSize="small" />}
-                        </IconButton>
-                      </Tooltip>
+                      {esAdmin ? (
+                        <>
+                          <Tooltip title={isActive ? "Editar" : "Ver detalles"}>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpen(p)}
+                            >
+                              <Edit fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip
+                            title={isActive ? "Deshabilitar" : "Reactivar"}
+                          >
+                            <IconButton
+                              size="small"
+                              color={isActive ? "error" : "success"}
+                              onClick={() => handleDelete(p.id)}
+                            >
+                              {isActive ? (
+                                <Delete fontSize="small" />
+                              ) : (
+                                <Restore fontSize="small" />
+                              )}
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      ) : (
+                        <Tooltip title="Solo administradores pueden editar">
+                          <IconButton size="small" disabled>
+                            <Edit fontSize="small" color="disabled" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -661,38 +694,45 @@ export default function Inventario() {
               error={!!errores.tipo}
               helperText={errores.tipo}
             />
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ display: "flex", gap: 2 }}>
               <TextField
-                label="Cantidad *" 
-                name="cantidad" 
-                type="number" 
-                value={form.cantidad} 
+                label="Cantidad *"
+                name="cantidad"
+                type="number"
+                value={form.cantidad}
                 onChange={handleChange}
-                error={!!errores.cantidad} 
-                helperText={errores.cantidad} 
+                error={!!errores.cantidad}
+                helperText={errores.cantidad}
                 inputProps={{ min: 0, step: 1 }}
                 fullWidth
               />
-              <Box sx={{ width: '100%' }}>
+              <Box sx={{ width: "100%" }}>
                 <TextField
-                  label="Precio Venta *" 
-                  name="precio" 
-                  type="number" 
-                  value={form.precio} 
+                  label="Precio Venta *"
+                  name="precio"
+                  type="number"
+                  value={form.precio}
                   onChange={handleChange}
-                  error={!!errores.precio} 
-                  helperText={errores.precio} 
+                  error={!!errores.precio}
+                  helperText={errores.precio}
                   inputProps={{ step: 0.5, min: 0.5 }}
                   fullWidth
                 />
                 {precioSugerido && (
-                  <Typography 
-                    variant="caption" 
-                    color="success.main" 
-                    sx={{ display: 'block', mt: 0.5, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                  <Typography
+                    variant="caption"
+                    color="success.main"
+                    sx={{
+                      display: "block",
+                      mt: 0.5,
+                      cursor: "pointer",
+                      "&:hover": { textDecoration: "underline" },
+                    }}
                     onClick={() => {
-                      const e = { target: { name: 'precio', value: precioSugerido } }
-                      handleChange(e)
+                      const e = {
+                        target: { name: "precio", value: precioSugerido },
+                      };
+                      handleChange(e);
                     }}
                   >
                     💡 Sugerido (+40%): ${precioSugerido}

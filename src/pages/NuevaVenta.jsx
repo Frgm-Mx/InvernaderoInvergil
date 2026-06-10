@@ -1,11 +1,40 @@
 import React, { useEffect, useState, useMemo } from "react";
 import {
-  Box, Typography, TextField, MenuItem, Button, IconButton, Card, CardContent,
-  Table, TableHead, TableRow, TableCell, TableBody, Divider, Alert, Switch,
-  FormControlLabel, Collapse, Chip, Paper, Dialog, DialogTitle, DialogContent, DialogActions
+  Box,
+  Typography,
+  TextField,
+  MenuItem,
+  Button,
+  IconButton,
+  Card,
+  CardContent,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Divider,
+  Alert,
+  Switch,
+  FormControlLabel,
+  Collapse,
+  Chip,
+  Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
-import Grid2 from "@mui/material/Grid2"; 
-import { Delete, Add, ShoppingCart, Receipt, PictureAsPdf, Email, Visibility } from "@mui/icons-material";
+import Grid2 from "@mui/material/Grid2";
+import {
+  Delete,
+  Add,
+  ShoppingCart,
+  Receipt,
+  PictureAsPdf,
+  Email,
+  Visibility,
+} from "@mui/icons-material";
 
 import { useAuth } from "../auth/AuthContext";
 import PlantaService from "../services/PlantaService";
@@ -18,7 +47,7 @@ import {
   generarFacturaPDF,
   descargarTicket,
   descargarFactura,
-  enviarPorCorreo
+  enviarPorCorreo,
 } from "../utils/pdfGenerator";
 
 const EMPTY_LINE = { id_planta: "", cantidad: 1, precio_unitario: 0 };
@@ -26,12 +55,13 @@ const EMPTY_LINE = { id_planta: "", cantidad: 1, precio_unitario: 0 };
 const iframeStyle = {
   border: "none",
   borderRadius: "4px",
-  backgroundColor: "#fff"
+  backgroundColor: "#fff",
 };
 
 export default function NuevaVenta() {
   const { user } = useAuth();
-  
+  const esAdmin = user?.rol === "administradora" || user?.rol === "admin";
+
   const [plantas, setPlantas] = useState([]);
   const [lineas, setLineas] = useState([{ ...EMPTY_LINE }]);
   const [formaPago, setFormaPago] = useState("efectivo");
@@ -54,7 +84,7 @@ export default function NuevaVenta() {
   const [ventaCreada, setVentaCreada] = useState(null);
   const [detallesCreados, setDetallesCreados] = useState([]);
   const [postDialog, setPostDialog] = useState(false);
-  
+
   // Estado para el ticket emergente
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const [ticketData, setTicketData] = useState("");
@@ -78,9 +108,12 @@ export default function NuevaVenta() {
         }
         // Validar stock en tiempo real
         if (planta && Number(copy[idx].cantidad) > planta.cantidad) {
-          setErrores(prev => ({ ...prev, [`linea_${idx}`]: `Stock insuficiente. Disponible: ${planta.cantidad}` }));
+          setErrores((prev) => ({
+            ...prev,
+            [`linea_${idx}`]: `Stock insuficiente. Disponible: ${planta.cantidad}`,
+          }));
         } else {
-          setErrores(prev => {
+          setErrores((prev) => {
             const newErrores = { ...prev };
             delete newErrores[`linea_${idx}`];
             return newErrores;
@@ -88,35 +121,47 @@ export default function NuevaVenta() {
         }
       } else {
         copy[idx][field] = value === "" ? "" : Number(value);
-        
+
         // Validar cantidad en tiempo real
         if (field === "cantidad") {
           const cantidadNum = Number(value);
           const plantaId = copy[idx].id_planta;
           const planta = plantas.find((p) => p.id === Number(plantaId));
-          
+
           if (planta && cantidadNum > planta.cantidad) {
-            setErrores(prev => ({ ...prev, [`linea_${idx}`]: `Stock insuficiente. Disponible: ${planta.cantidad}` }));
+            setErrores((prev) => ({
+              ...prev,
+              [`linea_${idx}`]: `Stock insuficiente. Disponible: ${planta.cantidad}`,
+            }));
           } else if (isNaN(cantidadNum) || cantidadNum <= 0) {
-            setErrores(prev => ({ ...prev, [`linea_${idx}`]: "Cantidad debe ser mayor a 0" }));
+            setErrores((prev) => ({
+              ...prev,
+              [`linea_${idx}`]: "Cantidad debe ser mayor a 0",
+            }));
           } else if (!Number.isInteger(cantidadNum)) {
-            setErrores(prev => ({ ...prev, [`linea_${idx}`]: "Cantidad debe ser un número entero" }));
+            setErrores((prev) => ({
+              ...prev,
+              [`linea_${idx}`]: "Cantidad debe ser un número entero",
+            }));
           } else {
-            setErrores(prev => {
+            setErrores((prev) => {
               const newErrores = { ...prev };
               delete newErrores[`linea_${idx}`];
               return newErrores;
             });
           }
         }
-        
+
         // Validar precio en tiempo real
         if (field === "precio_unitario") {
           const precioNum = Number(value);
           if (isNaN(precioNum) || precioNum <= 0) {
-            setErrores(prev => ({ ...prev, [`linea_${idx}`]: "Precio inválido" }));
+            setErrores((prev) => ({
+              ...prev,
+              [`linea_${idx}`]: "Precio inválido",
+            }));
           } else {
-            setErrores(prev => {
+            setErrores((prev) => {
               const newErrores = { ...prev };
               delete newErrores[`linea_${idx}`];
               return newErrores;
@@ -131,70 +176,79 @@ export default function NuevaVenta() {
   // Validación en tiempo real para campos de cliente y pagos
   const validarCampoEnTiempoReal = (campo, valor) => {
     const nuevosErrores = { ...errores };
-    
+
     switch (campo) {
-      case 'telefono':
+      case "telefono":
         const telefonoLimpio = valor.replace(/[\s-]/g, "");
-        if (valor && (!/^\d+$/.test(telefonoLimpio))) {
+        if (valor && !/^\d+$/.test(telefonoLimpio)) {
           nuevosErrores.telefono = "El teléfono solo debe contener números";
-        } else if (valor && (telefonoLimpio.length < 10 || telefonoLimpio.length > 13)) {
-          nuevosErrores.telefono = "El teléfono debe tener entre 10 y 13 dígitos";
+        } else if (
+          valor &&
+          (telefonoLimpio.length < 10 || telefonoLimpio.length > 13)
+        ) {
+          nuevosErrores.telefono =
+            "El teléfono debe tener entre 10 y 13 dígitos";
         } else {
           delete nuevosErrores.telefono;
         }
         break;
-        
-      case 'email':
+
+      case "email":
         const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (valor && !emailRegex.test(valor.trim())) {
-          nuevosErrores.email = "El formato del correo electrónico no es válido";
+          nuevosErrores.email =
+            "El formato del correo electrónico no es válido";
         } else {
           delete nuevosErrores.email;
         }
         break;
-        
-      case 'montoPagado':
+
+      case "montoPagado":
         if (!esAnticipo && formaPago === "efectivo") {
           const pagadoNum = Number(valor);
           if (valor && pagadoNum < total) {
             nuevosErrores.montoPagado = `Efectivo insuficiente. Faltan $${(total - pagadoNum).toFixed(2)}`;
           } else if (valor && pagadoNum > total * 5) {
-            nuevosErrores.montoPagado = "El monto ingresado parece excesivo para el total de la orden";
+            nuevosErrores.montoPagado =
+              "El monto ingresado parece excesivo para el total de la orden";
           } else {
             delete nuevosErrores.montoPagado;
           }
         }
         break;
-        
-      case 'montoAnticipo':
+
+      case "montoAnticipo":
         if (esAnticipo) {
           const anticipoNum = Number(valor);
           if (valor && (isNaN(anticipoNum) || anticipoNum <= 0)) {
-            nuevosErrores.anticipo = "El monto del anticipo debe ser mayor a $0";
+            nuevosErrores.anticipo =
+              "El monto del anticipo debe ser mayor a $0";
           } else if (valor && anticipoNum >= total) {
-            nuevosErrores.anticipo = "El anticipo no puede ser igual o mayor al total";
+            nuevosErrores.anticipo =
+              "El anticipo no puede ser igual o mayor al total";
           } else {
             delete nuevosErrores.anticipo;
           }
         }
         break;
-        
+
       default:
         break;
     }
-    
+
     setErrores(nuevosErrores);
   };
 
   const addLine = () => setLineas((prev) => [...prev, { ...EMPTY_LINE }]);
-  
+
   const removeLine = (idx) => {
     if (lineas.length > 1) {
       setLineas((prev) => prev.filter((_, i) => i !== idx));
     }
   };
 
-  const calcSubtotal = (l) => (Number(l.cantidad) || 0) * (Number(l.precio_unitario) || 0);
+  const calcSubtotal = (l) =>
+    (Number(l.cantidad) || 0) * (Number(l.precio_unitario) || 0);
 
   const totalCantidad = useMemo(() => {
     return lineas.reduce((s, l) => s + (Number(l.cantidad) || 0), 0);
@@ -213,7 +267,7 @@ export default function NuevaVenta() {
   }, [montoPagado, total, esAnticipo, formaPago]);
 
   const ticketSrcData = useMemo(() => {
-    const lineasValidas = lineas.filter(l => l.id_planta !== "");
+    const lineasValidas = lineas.filter((l) => l.id_planta !== "");
     if (total === 0 || lineasValidas.length === 0) return "";
 
     const detallesSimulados = lineasValidas.map((l) => {
@@ -223,16 +277,16 @@ export default function NuevaVenta() {
         nombre_planta: p ? p.nombre : `Planta #${l.id_planta}`,
         cantidad: Number(l.cantidad) || 0,
         precio_unitario: Number(l.precio_unitario) || 0,
-        subtotal: calcSubtotal(l)
+        subtotal: calcSubtotal(l),
       };
     });
 
-    const mAnticipo = esAnticipo ? (Number(montoAnticipo) || 0) : 0;
+    const mAnticipo = esAnticipo ? Number(montoAnticipo) || 0 : 0;
     const mPagado = esAnticipo ? mAnticipo : total;
     const saldoPendiente = esAnticipo ? Math.max(0, total - mAnticipo) : 0;
 
     const ventaSimulada = {
-      id: ventaCreada?.id || 0, 
+      id: ventaCreada?.id || 0,
       fecha: new Date().toISOString(),
       forma_pago: formaPago,
       tipo_venta: tipoVenta,
@@ -245,7 +299,7 @@ export default function NuevaVenta() {
       monto_pagado: mPagado,
       saldo_pendiente: saldoPendiente,
       estado: esAnticipo ? "con_anticipo" : "pagada",
-      observaciones: observaciones
+      observaciones: observaciones,
     };
 
     const pagosSimulados = [];
@@ -255,7 +309,7 @@ export default function NuevaVenta() {
         tipo: "anticipo",
         forma_pago: formaPago,
         monto: mAnticipo,
-        nota: "Anticipo de registro"
+        nota: "Anticipo de registro",
       });
     } else {
       pagosSimulados.push({
@@ -263,7 +317,7 @@ export default function NuevaVenta() {
         tipo: "pago_completo",
         forma_pago: formaPago,
         monto: total,
-        nota: "Liquidación total"
+        nota: "Liquidación total",
       });
     }
 
@@ -272,14 +326,30 @@ export default function NuevaVenta() {
         venta: ventaSimulada,
         detalles: detallesSimulados,
         pagos: pagosSimulados,
-        vendedor: user?.nombre || "Admin"
+        vendedor: user?.nombre || "Admin",
       });
       return doc.output("datauristring");
     } catch (e) {
       console.error("Error generando preview de PDF:", e);
       return "";
     }
-  }, [lineas, plantas, clienteNombre, clienteTelefono, clienteEmail, notaRemision, observaciones, formaPago, montoPagado, esAnticipo, montoAnticipo, total, tipoVenta, user, ventaCreada]);
+  }, [
+    lineas,
+    plantas,
+    clienteNombre,
+    clienteTelefono,
+    clienteEmail,
+    notaRemision,
+    observaciones,
+    formaPago,
+    montoPagado,
+    esAnticipo,
+    montoAnticipo,
+    total,
+    tipoVenta,
+    user,
+    ventaCreada,
+  ]);
 
   const validar = () => {
     const err = {};
@@ -307,14 +377,18 @@ export default function NuevaVenta() {
 
       const planta = plantas.find((p) => p.id === Number(l.id_planta));
       if (planta && cantidadNum > planta.cantidad) {
-        err[`linea_${idx}`] = `Stock insuficiente de "${planta.nombre}" (disponible: ${planta.cantidad})`;
+        err[`linea_${idx}`] =
+          `Stock insuficiente de "${planta.nombre}" (disponible: ${planta.cantidad})`;
       }
     });
 
-    const idsUsados = lineas.filter((l) => l.id_planta).map((l) => Number(l.id_planta));
+    const idsUsados = lineas
+      .filter((l) => l.id_planta)
+      .map((l) => Number(l.id_planta));
     const duplicados = idsUsados.filter((id, i) => idsUsados.indexOf(id) !== i);
     if (duplicados.length > 0) {
-      err.duplicados = "Hay plantas repetidas en el detalle. Combínalas en una sola línea.";
+      err.duplicados =
+        "Hay plantas repetidas en el detalle. Combínalas en una sola línea.";
     }
 
     if (esAnticipo) {
@@ -322,7 +396,8 @@ export default function NuevaVenta() {
       if (!montoAnticipo || isNaN(mAnticipo) || mAnticipo <= 0) {
         err.anticipo = "El monto del anticipo debe ser mayor a $0";
       } else if (mAnticipo >= total) {
-        err.anticipo = 'El anticipo no puede ser igual o mayor al total del pedido. Desactiva "Anticipo" si liquidará la cuenta.';
+        err.anticipo =
+          'El anticipo no puede ser igual o mayor al total del pedido. Desactiva "Anticipo" si liquidará la cuenta.';
       }
     } else {
       if (formaPago === "efectivo") {
@@ -332,7 +407,8 @@ export default function NuevaVenta() {
         } else if (pagadoNum < total) {
           err.montoPagado = `Efectivo insuficiente. El total es de $${total.toFixed(2)} y recibiste $${pagadoNum.toFixed(2)}`;
         } else if (pagadoNum > total * 5) {
-          err.montoPagado = "El monto ingresado parece excesivo para el total de la orden. Verifica la cantidad.";
+          err.montoPagado =
+            "El monto ingresado parece excesivo para el total de la orden. Verifica la cantidad.";
         }
       }
     }
@@ -351,7 +427,10 @@ export default function NuevaVenta() {
     setSaving(true);
     try {
       const anticipoMonto = esAnticipo ? Number(montoAnticipo) : 0;
-      const cambioVal = formaPago === "efectivo" && !esAnticipo ? Math.max(0, Number(montoPagado) - total) : 0;
+      const cambioVal =
+        formaPago === "efectivo" && !esAnticipo
+          ? Math.max(0, Number(montoPagado) - total)
+          : 0;
       const montoPagadoVal = esAnticipo ? anticipoMonto : total;
       const saldoPendiente = total - montoPagadoVal;
 
@@ -372,7 +451,7 @@ export default function NuevaVenta() {
         cliente_telefono: clienteTelefono.replace(/[\s-]/g, "").trim(),
         cliente_email: clienteEmail.trim().toLowerCase(),
       });
-      
+
       const idVentaGenerada = venta.id || venta.id_venta;
 
       // 2. Crear detalles en Backend
@@ -417,32 +496,40 @@ export default function NuevaVenta() {
       // Preparar detalles con nombres para PDF
       const detallesConNombre = detalles.map((d) => ({
         ...d,
-        nombre_planta: plantas.find((p) => p.id === d.id_planta)?.nombre || `#${d.id_planta}`,
+        nombre_planta:
+          plantas.find((p) => p.id === d.id_planta)?.nombre ||
+          `#${d.id_planta}`,
       }));
-      
-      const ventaDefinitiva = { ...venta, id: idVentaGenerada, nota_remision: venta.nota_remision };
+
+      const ventaDefinitiva = {
+        ...venta,
+        id: idVentaGenerada,
+        nota_remision: venta.nota_remision,
+      };
       setVentaCreada(ventaDefinitiva);
       setDetallesCreados(detallesConNombre);
-      
+
       // Generar ticket para mostrar en modal emergente
-      const pagosParaTicket = [{
-        fecha: new Date().toISOString(),
-        tipo: esAnticipo ? "anticipo" : "pago_completo",
-        forma_pago: formaPago,
-        monto: montoPagadoVal,
-        nota: pagoNota
-      }];
-      
+      const pagosParaTicket = [
+        {
+          fecha: new Date().toISOString(),
+          tipo: esAnticipo ? "anticipo" : "pago_completo",
+          forma_pago: formaPago,
+          monto: montoPagadoVal,
+          nota: pagoNota,
+        },
+      ];
+
       const docTicket = generarTicketPDF({
         venta: ventaDefinitiva,
         detalles: detallesConNombre,
         pagos: pagosParaTicket,
-        vendedor: user?.nombre || "Admin"
+        vendedor: user?.nombre || "Admin",
       });
       setTicketData(docTicket.output("datauristring"));
-      
+
       //setPostDialog(true);
-      setTicketDialogOpen(true);  // Abrir el ticket emergente
+      setTicketDialogOpen(true); // Abrir el ticket emergente
 
       const mensajeExito = `Venta #${idVentaGenerada} registrada — $${total.toFixed(2)} (${tipoVenta})`;
       setSuccess(mensajeExito);
@@ -471,19 +558,35 @@ export default function NuevaVenta() {
 
   const handleDescargarTicket = () => {
     if (ventaCreada && detallesCreados.length) {
-      descargarTicket(ventaCreada, detallesCreados, [], user?.nombre || "Admin");
+      descargarTicket(
+        ventaCreada,
+        detallesCreados,
+        [],
+        user?.nombre || "Admin",
+      );
     }
   };
 
   const handleDescargarFactura = () => {
     if (ventaCreada && detallesCreados.length) {
-      descargarFactura(ventaCreada, detallesCreados, [], user?.nombre || "Admin");
+      descargarFactura(
+        ventaCreada,
+        detallesCreados,
+        [],
+        user?.nombre || "Admin",
+      );
     }
   };
 
   const handleEnviarCorreo = () => {
     if (ventaCreada && detallesCreados.length) {
-      enviarPorCorreo(ventaCreada, detallesCreados, [], user?.nombre || "Admin", ventaCreada.cliente_email);
+      enviarPorCorreo(
+        ventaCreada,
+        detallesCreados,
+        [],
+        user?.nombre || "Admin",
+        ventaCreada.cliente_email,
+      );
     }
   };
 
@@ -493,67 +596,111 @@ export default function NuevaVenta() {
         Nueva Venta
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError("")}>{error}</Alert>}
-      {success && <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setSuccess("")}>{success}</Alert>}
+      {error && (
+        <Alert
+          severity="error"
+          sx={{ mb: 2, borderRadius: 2 }}
+          onClose={() => setError("")}
+        >
+          {error}
+        </Alert>
+      )}
+      {success && (
+        <Alert
+          severity="success"
+          sx={{ mb: 2, borderRadius: 2 }}
+          onClose={() => setSuccess("")}
+        >
+          {success}
+        </Alert>
+      )}
 
       <Grid2 container spacing={3}>
         <Grid2 size={{ xs: 12, md: 7, lg: 8 }}>
           <Card sx={{ borderRadius: 2, boxShadow: 3 }}>
             <CardContent>
-              <Typography variant="h6" gutterBottom color="primary" fontWeight={600}>
+              <Typography
+                variant="h6"
+                gutterBottom
+                color="primary"
+                fontWeight={600}
+              >
                 Datos del Cliente (opcional)
               </Typography>
-              <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 3, mt: 1 }}>
-                <TextField 
-                  label="Nombre del cliente" 
-                  value={clienteNombre} 
-                  onChange={(e) => setClienteNombre(e.target.value)} 
-                  placeholder="Ej: Florería del Centro" 
-                  sx={{ flex: 1, minWidth: 200 }} 
-                  size="small" 
+              <Box
+                sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 3, mt: 1 }}
+              >
+                <TextField
+                  label="Nombre del cliente"
+                  value={clienteNombre}
+                  onChange={(e) => setClienteNombre(e.target.value)}
+                  placeholder="Ej: Florería del Centro"
+                  sx={{ flex: 1, minWidth: 200 }}
+                  size="small"
                 />
-                <TextField 
-                  label="Teléfono" 
-                  value={clienteTelefono} 
-                  onChange={(e) => { 
-                    setClienteTelefono(e.target.value); 
-                    validarCampoEnTiempoReal('telefono', e.target.value);
-                  }} 
-                  onBlur={(e) => validarCampoEnTiempoReal('telefono', e.target.value)}
-                  placeholder="7121234567" 
+                <TextField
+                  label="Teléfono"
+                  value={clienteTelefono}
+                  onChange={(e) => {
+                    setClienteTelefono(e.target.value);
+                    validarCampoEnTiempoReal("telefono", e.target.value);
+                  }}
+                  onBlur={(e) =>
+                    validarCampoEnTiempoReal("telefono", e.target.value)
+                  }
+                  placeholder="7121234567"
                   error={!!errores.telefono}
                   helperText={errores.telefono}
-                  sx={{ minWidth: 150 }} 
-                  size="small" 
+                  sx={{ minWidth: 150 }}
+                  size="small"
                 />
-                <TextField 
-                  label="Email" 
-                  value={clienteEmail} 
-                  onChange={(e) => { 
-                    setClienteEmail(e.target.value); 
-                    validarCampoEnTiempoReal('email', e.target.value);
-                  }} 
-                  onBlur={(e) => validarCampoEnTiempoReal('email', e.target.value)}
-                  placeholder="cliente@correo.com" 
+                <TextField
+                  label="Email"
+                  value={clienteEmail}
+                  onChange={(e) => {
+                    setClienteEmail(e.target.value);
+                    validarCampoEnTiempoReal("email", e.target.value);
+                  }}
+                  onBlur={(e) =>
+                    validarCampoEnTiempoReal("email", e.target.value)
+                  }
+                  placeholder="cliente@correo.com"
                   error={!!errores.email}
                   helperText={errores.email}
-                  sx={{ flex: 1, minWidth: 200 }} 
-                  size="small" 
+                  sx={{ flex: 1, minWidth: 200 }}
+                  size="small"
                 />
               </Box>
 
               <Divider sx={{ mb: 3 }} />
 
-              <Typography variant="h6" gutterBottom color="primary" fontWeight={600}>
+              <Typography
+                variant="h6"
+                gutterBottom
+                color="primary"
+                fontWeight={600}
+              >
                 Detalle de Productos
               </Typography>
 
-              {errores.duplicados && <Alert severity="warning" sx={{ mb: 2 }}>{errores.duplicados}</Alert>}
-              {errores.total && <Alert severity="warning" sx={{ mb: 2 }}>{errores.total}</Alert>}
+              {errores.duplicados && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  {errores.duplicados}
+                </Alert>
+              )}
+              {errores.total && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  {errores.total}
+                </Alert>
+              )}
 
               <Table size="small" sx={{ mb: 1 }}>
                 <TableHead>
-                  <TableRow sx={{ "& th": { fontWeight: 700, bgcolor: "action.hover" } }}>
+                  <TableRow
+                    sx={{
+                      "& th": { fontWeight: 700, bgcolor: "action.hover" },
+                    }}
+                  >
                     <TableCell>Planta</TableCell>
                     <TableCell align="right">Cantidad</TableCell>
                     <TableCell align="right">Precio Unit.</TableCell>
@@ -569,16 +716,22 @@ export default function NuevaVenta() {
                           select
                           label="Seleccionar Planta"
                           value={l.id_planta}
-                          onChange={(e) => handleLineChange(idx, "id_planta", e.target.value)}
+                          onChange={(e) =>
+                            handleLineChange(idx, "id_planta", e.target.value)
+                          }
                           size="small"
                           sx={{ minWidth: 220 }}
                           error={!!errores[`linea_${idx}`]}
                           helperText={errores[`linea_${idx}`]}
                           SelectProps={{
-                            MenuProps: { PaperProps: { style: { maxHeight: 250 } } }
+                            MenuProps: {
+                              PaperProps: { style: { maxHeight: 250 } },
+                            },
                           }}
                         >
-                          <MenuItem value=""><em>— Seleccionar —</em></MenuItem>
+                          <MenuItem value="">
+                            <em>— Seleccionar —</em>
+                          </MenuItem>
                           {plantas.map((p) => (
                             <MenuItem key={p.id} value={p.id}>
                               {p.nombre} ({p.cantidad} disp.)
@@ -587,31 +740,46 @@ export default function NuevaVenta() {
                         </TextField>
                       </TableCell>
                       <TableCell align="right">
-                        <TextField 
-                          type="number" 
-                          value={l.cantidad} 
-                          size="small" 
-                          sx={{ width: 90 }} 
-                          onChange={(e) => handleLineChange(idx, "cantidad", e.target.value)} 
-                          inputProps={{ min: 1, step: 1 }} 
+                        <TextField
+                          type="number"
+                          value={l.cantidad}
+                          size="small"
+                          sx={{ width: 90 }}
+                          onChange={(e) =>
+                            handleLineChange(idx, "cantidad", e.target.value)
+                          }
+                          inputProps={{ min: 1, step: 1 }}
                         />
                       </TableCell>
                       <TableCell align="right">
-                        <TextField 
-                          type="number" 
-                          value={l.precio_unitario} 
-                          size="small" 
-                          sx={{ width: 100 }} 
-                          onChange={(e) => handleLineChange(idx, "precio_unitario", e.target.value)} 
-                          inputProps={{ step: 0.5, min: 0 }} 
+                        <TextField
+                          type="number"
+                          value={l.precio_unitario}
+                          size="small"
+                          sx={{ width: 100 }}
+                          onChange={(e) =>
+                            handleLineChange(
+                              idx,
+                              "precio_unitario",
+                              e.target.value,
+                            )
+                          }
+                          inputProps={{ step: 0.5, min: 0 }}
+                          disabled={!esAdmin}
                         />
                       </TableCell>
                       <TableCell align="right">
-                        <Typography fontWeight={600} variant="body2">${calcSubtotal(l).toFixed(2)}</Typography>
+                        <Typography fontWeight={600} variant="body2">
+                          ${calcSubtotal(l).toFixed(2)}
+                        </Typography>
                       </TableCell>
                       <TableCell>
                         {lineas.length > 1 && (
-                          <IconButton size="small" color="error" onClick={() => removeLine(idx)}>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => removeLine(idx)}
+                          >
                             <Delete fontSize="small" />
                           </IconButton>
                         )}
@@ -620,25 +788,80 @@ export default function NuevaVenta() {
                   ))}
                 </TableBody>
               </Table>
-              
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1, flexWrap: 'wrap', gap: 2 }}>
-                <Button startIcon={<Add />} onClick={addLine} size="small" variant="text">Agregar línea</Button>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, pr: 1 }}>
-                  <Typography variant="body2" color="text.secondary">{totalCantidad.toLocaleString()} plantas</Typography>
-                  <Typography variant="subtitle1" fontWeight={700} color="text.primary">Suma Total: <span style={{ marginLeft: '8px', color: '#1976d2', fontWeight: 800 }}>${total.toFixed(2)}</span></Typography>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mt: 1,
+                  flexWrap: "wrap",
+                  gap: 2,
+                }}
+              >
+                <Button
+                  startIcon={<Add />}
+                  onClick={addLine}
+                  size="small"
+                  variant="text"
+                >
+                  Agregar línea
+                </Button>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", gap: 2, pr: 1 }}
+                >
+                  <Typography variant="body2" color="text.secondary">
+                    {totalCantidad.toLocaleString()} plantas
+                  </Typography>
+                  <Typography
+                    variant="subtitle1"
+                    fontWeight={700}
+                    color="text.primary"
+                  >
+                    Suma Total:{" "}
+                    <span
+                      style={{
+                        marginLeft: "8px",
+                        color: "#1976d2",
+                        fontWeight: 800,
+                      }}
+                    >
+                      ${total.toFixed(2)}
+                    </span>
+                  </Typography>
                 </Box>
               </Box>
 
               <Divider sx={{ my: 3 }} />
 
-              <Typography variant="h6" gutterBottom color="primary" fontWeight={600}>Condiciones de Pago y Control</Typography>
-              <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center", mt: 1, mb: 2 }}>
-                <TextField 
-                  select 
-                  label="Forma de Pago" 
-                  value={formaPago} 
-                  onChange={(e) => { setFormaPago(e.target.value); setMontoPagado(""); setErrores(p => ({...p, montoPagado: ""})); }} 
-                  size="small" 
+              <Typography
+                variant="h6"
+                gutterBottom
+                color="primary"
+                fontWeight={600}
+              >
+                Condiciones de Pago y Control
+              </Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 2,
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  mt: 1,
+                  mb: 2,
+                }}
+              >
+                <TextField
+                  select
+                  label="Forma de Pago"
+                  value={formaPago}
+                  onChange={(e) => {
+                    setFormaPago(e.target.value);
+                    setMontoPagado("");
+                    setErrores((p) => ({ ...p, montoPagado: "" }));
+                  }}
+                  size="small"
                   sx={{ minWidth: 160 }}
                 >
                   <MenuItem value="efectivo">Efectivo</MenuItem>
@@ -646,100 +869,254 @@ export default function NuevaVenta() {
                 </TextField>
 
                 {!esAnticipo && formaPago === "efectivo" && (
-                  <TextField 
-                    label="Monto recibido" 
-                    type="number" 
-                    value={montoPagado} 
-                    onChange={(e) => { 
-                      setMontoPagado(e.target.value); 
-                      validarCampoEnTiempoReal('montoPagado', e.target.value);
-                    }} 
-                    onBlur={(e) => validarCampoEnTiempoReal('montoPagado', e.target.value)}
-                    size="small" 
+                  <TextField
+                    label="Monto recibido"
+                    type="number"
+                    value={montoPagado}
+                    onChange={(e) => {
+                      setMontoPagado(e.target.value);
+                      validarCampoEnTiempoReal("montoPagado", e.target.value);
+                    }}
+                    onBlur={(e) =>
+                      validarCampoEnTiempoReal("montoPagado", e.target.value)
+                    }
+                    size="small"
                     error={!!errores.montoPagado}
                     helperText={errores.montoPagado}
-                    sx={{ width: 150 }} 
-                    InputProps={{ startAdornment: <Typography sx={{ mr: 0.5, color: "text.secondary", fontSize: 14 }}>$</Typography> }} 
+                    sx={{ width: 150 }}
+                    InputProps={{
+                      startAdornment: (
+                        <Typography
+                          sx={{
+                            mr: 0.5,
+                            color: "text.secondary",
+                            fontSize: 14,
+                          }}
+                        >
+                          $
+                        </Typography>
+                      ),
+                    }}
                   />
                 )}
-                
+
                 {/* Nota de Remisión - Solo lectura, se genera automáticamente */}
-                <TextField 
-                  label="Nota de Remisión" 
-                  value="Se genera automáticamente" 
+                <TextField
+                  label="Nota de Remisión"
+                  value="Se genera automáticamente"
                   disabled
-                  size="small" 
+                  size="small"
                   sx={{ minWidth: 180 }}
                   InputProps={{ readOnly: true }}
                 />
-                
-                <TextField label="Observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} size="small" sx={{ flex: 1, minWidth: 200 }} />
+
+                <TextField
+                  label="Observaciones"
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  size="small"
+                  sx={{ flex: 1, minWidth: 200 }}
+                />
               </Box>
 
-              <Box sx={{ mb: 2, bgcolor: 'action.hover', p: 1, borderRadius: 1 }}>
-                <FormControlLabel 
-                  control={ <Switch checked={esAnticipo} onChange={(e) => { setEsAnticipo(e.target.checked); setMontoAnticipo(""); setErrores(p => ({...p, anticipo: ""})); }} color="warning" size="small" /> } 
-                  label={<Typography variant="body2" fontWeight={500}>El cliente paga con anticipo</Typography>} 
+              <Box
+                sx={{ mb: 2, bgcolor: "action.hover", p: 1, borderRadius: 1 }}
+              >
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={esAnticipo}
+                      onChange={(e) => {
+                        setEsAnticipo(e.target.checked);
+                        setMontoAnticipo("");
+                        setErrores((p) => ({ ...p, anticipo: "" }));
+                      }}
+                      color="warning"
+                      size="small"
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" fontWeight={500}>
+                      El cliente paga con anticipo
+                    </Typography>
+                  }
                 />
                 <Collapse in={esAnticipo}>
-                  <Box sx={{ mt: 1, pl: 2, display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
-                    <TextField 
-                      label="Monto del anticipo" 
-                      type="number" 
-                      value={montoAnticipo} 
-                      onChange={(e) => { 
-                        setMontoAnticipo(e.target.value); 
-                        validarCampoEnTiempoReal('montoAnticipo', e.target.value);
-                      }} 
-                      onBlur={(e) => validarCampoEnTiempoReal('montoAnticipo', e.target.value)}
-                      size="small" 
+                  <Box
+                    sx={{
+                      mt: 1,
+                      pl: 2,
+                      display: "flex",
+                      gap: 2,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <TextField
+                      label="Monto del anticipo"
+                      type="number"
+                      value={montoAnticipo}
+                      onChange={(e) => {
+                        setMontoAnticipo(e.target.value);
+                        validarCampoEnTiempoReal(
+                          "montoAnticipo",
+                          e.target.value,
+                        );
+                      }}
+                      onBlur={(e) =>
+                        validarCampoEnTiempoReal(
+                          "montoAnticipo",
+                          e.target.value,
+                        )
+                      }
+                      size="small"
                       error={!!errores.anticipo}
                       helperText={errores.anticipo}
-                      sx={{ width: 180 }} 
-                      InputProps={{ startAdornment: <Typography sx={{ mr: 0.5, color: "text.secondary", fontSize: 14 }}>$</Typography> }} 
+                      sx={{ width: 180 }}
+                      InputProps={{
+                        startAdornment: (
+                          <Typography
+                            sx={{
+                              mr: 0.5,
+                              color: "text.secondary",
+                              fontSize: 14,
+                            }}
+                          >
+                            $
+                          </Typography>
+                        ),
+                      }}
                     />
                   </Box>
                 </Collapse>
               </Box>
 
-              <Box sx={{ mt: 3, p: 2, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography color="text.secondary" variant="body2">Subtotal bruto:</Typography>
-                  <Typography fontWeight={500} variant="body2">${total.toFixed(2)}</Typography>
+              <Box
+                sx={{
+                  mt: 3,
+                  p: 2,
+                  bgcolor: "background.paper",
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    mb: 1,
+                  }}
+                >
+                  <Typography color="text.secondary" variant="body2">
+                    Subtotal bruto:
+                  </Typography>
+                  <Typography fontWeight={500} variant="body2">
+                    ${total.toFixed(2)}
+                  </Typography>
                 </Box>
                 <Divider sx={{ my: 1 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="subtitle1" fontWeight={700}>Total Neto:</Typography>
-                    <Chip label={tipoVenta === "mayoreo" ? "MAYOREO (≥1,000)" : "Menudeo"} size="small" color={tipoVenta === "mayoreo" ? "warning" : "default"} />
-                    {esAnticipo && <Chip label="CON ANTICIPO" size="small" color="info" />}
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography variant="subtitle1" fontWeight={700}>
+                      Total Neto:
+                    </Typography>
+                    <Chip
+                      label={
+                        tipoVenta === "mayoreo" ? "MAYOREO (≥1,000)" : "Menudeo"
+                      }
+                      size="small"
+                      color={tipoVenta === "mayoreo" ? "warning" : "default"}
+                    />
+                    {esAnticipo && (
+                      <Chip label="CON ANTICIPO" size="small" color="info" />
+                    )}
                   </Box>
-                  <Typography variant="h5" fontWeight={800} color="primary.main">${total.toFixed(2)}</Typography>
+                  <Typography
+                    variant="h5"
+                    fontWeight={800}
+                    color="primary.main"
+                  >
+                    ${total.toFixed(2)}
+                  </Typography>
                 </Box>
 
-                {esAnticipo && Number(montoAnticipo) > 0 && Number(montoAnticipo) < total && (
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', bgcolor: '#fff3e0', p: 1.2, borderRadius: 1, mt: 1.5 }}>
-                    <Typography variant="body2" color="warning.dark" fontWeight={600}>Anticipo: ${Number(montoAnticipo).toFixed(2)}</Typography>
-                    <Typography variant="body2" color="warning.dark" fontWeight={700}>Resta por Liquidar: ${(total - Number(montoAnticipo)).toFixed(2)}</Typography>
-                  </Box>
-                )}
+                {esAnticipo &&
+                  Number(montoAnticipo) > 0 &&
+                  Number(montoAnticipo) < total && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        bgcolor: "#fff3e0",
+                        p: 1.2,
+                        borderRadius: 1,
+                        mt: 1.5,
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        color="warning.dark"
+                        fontWeight={600}
+                      >
+                        Anticipo: ${Number(montoAnticipo).toFixed(2)}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="warning.dark"
+                        fontWeight={700}
+                      >
+                        Resta por Liquidar: $
+                        {(total - Number(montoAnticipo)).toFixed(2)}
+                      </Typography>
+                    </Box>
+                  )}
 
-                {!esAnticipo && formaPago === "efectivo" && Number(montoPagado) >= total && (
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', bgcolor: '#e8f5e9', p: 1.2, borderRadius: 1, mt: 1.5 }}>
-                    <Typography variant="body2" color="success.dark" fontWeight={600}>Efectivo Recibido: ${Number(montoPagado).toFixed(2)}</Typography>
-                    <Typography variant="body2" color="success.dark" fontWeight={700}>Cambio al Cliente: ${cambio.toFixed(2)}</Typography>
-                  </Box>
-                )}
+                {!esAnticipo &&
+                  formaPago === "efectivo" &&
+                  Number(montoPagado) >= total && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        bgcolor: "#e8f5e9",
+                        p: 1.2,
+                        borderRadius: 1,
+                        mt: 1.5,
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        color="success.dark"
+                        fontWeight={600}
+                      >
+                        Efectivo Recibido: ${Number(montoPagado).toFixed(2)}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="success.dark"
+                        fontWeight={700}
+                      >
+                        Cambio al Cliente: ${cambio.toFixed(2)}
+                      </Typography>
+                    </Box>
+                  )}
               </Box>
 
-              <Button 
-                variant="contained" 
-                size="large" 
-                startIcon={<ShoppingCart />} 
-                onClick={handleSubmit} 
-                disabled={saving || total === 0} 
-                fullWidth 
-                sx={{ mt: 3, py: 1.5, fontWeight: 'bold', borderRadius: 1.5 }}
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<ShoppingCart />}
+                onClick={handleSubmit}
+                disabled={saving || total === 0}
+                fullWidth
+                sx={{ mt: 3, py: 1.5, fontWeight: "bold", borderRadius: 1.5 }}
               >
                 {saving ? "Registrando Venta..." : "Registrar Venta"}
               </Button>
@@ -748,22 +1125,70 @@ export default function NuevaVenta() {
         </Grid2>
 
         <Grid2 size={{ xs: 12, md: 5, lg: 4 }}>
-          <Paper elevation={3} sx={{ p: 2, position: "sticky", top: 24, borderRadius: 2, bgcolor: "grey.100", textAlign: "center" }}>
-            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1, mb: 1.5 }}>
+          <Paper
+            elevation={3}
+            sx={{
+              p: 2,
+              position: "sticky",
+              top: 24,
+              borderRadius: 2,
+              bgcolor: "grey.100",
+              textAlign: "center",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 1,
+                mb: 1.5,
+              }}
+            >
               <Receipt color="action" fontSize="small" />
-              <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase" }}>Previsualización del Ticket (80mm)</Typography>
+              <Typography
+                variant="subtitle2"
+                fontWeight={700}
+                color="text.secondary"
+                sx={{ textTransform: "uppercase" }}
+              >
+                Previsualización del Ticket (80mm)
+              </Typography>
             </Box>
             {ticketSrcData === "" ? (
-              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: 450, bgcolor: "background.paper", borderRadius: 1, border: "2px dashed", borderColor: "divider", p: 3 }}>
-                <Typography variant="body2" color="text.secondary">Agrega productos válidos para generar el borrador del ticket automáticamente.</Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: 450,
+                  bgcolor: "background.paper",
+                  borderRadius: 1,
+                  border: "2px dashed",
+                  borderColor: "divider",
+                  p: 3,
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Agrega productos válidos para generar el borrador del ticket
+                  automáticamente.
+                </Typography>
               </Box>
             ) : (
-              <Box sx={{ bgcolor: "background.paper", borderRadius: 1, p: 0.5, boxShadow: "inset 0px 2px 4px rgba(0,0,0,0.06)", overflow: "hidden" }}>
-                <iframe 
-                  title="Preview Ticket" 
-                  src={`${ticketSrcData}#toolbar=0&navpanes=0&statusbar=0`} 
-                  width="100%" 
-                  height="500px" 
+              <Box
+                sx={{
+                  bgcolor: "background.paper",
+                  borderRadius: 1,
+                  p: 0.5,
+                  boxShadow: "inset 0px 2px 4px rgba(0,0,0,0.06)",
+                  overflow: "hidden",
+                }}
+              >
+                <iframe
+                  title="Preview Ticket"
+                  src={`${ticketSrcData}#toolbar=0&navpanes=0&statusbar=0`}
+                  width="100%"
+                  height="500px"
                   style={iframeStyle}
                 />
               </Box>
@@ -771,7 +1196,6 @@ export default function NuevaVenta() {
           </Paper>
         </Grid2>
       </Grid2>
-
 
       {/* Diálogo para mostrar ticket emergente al crear venta */}
       <Dialog
@@ -782,42 +1206,53 @@ export default function NuevaVenta() {
       >
         <DialogTitle sx={{ textAlign: "center" }}>
           <Receipt sx={{ fontSize: 40, color: "success.main", mb: 1 }} />
-          <Typography variant="h6">Ticket de Venta #{ventaCreada?.id}</Typography>
+          <Typography variant="h6">
+            Ticket de Venta #{ventaCreada?.id}
+          </Typography>
           <Typography variant="caption" color="text.secondary">
             Nota: {ventaCreada?.nota_remision}
           </Typography>
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ bgcolor: "background.paper", borderRadius: 1, p: 0.5, overflow: "hidden" }}>
-            <iframe 
-              title="Ticket Preview" 
-              src={`${ticketData}#toolbar=0&navpanes=0&statusbar=0`} 
-              width="100%" 
-              height="450px" 
+          <Box
+            sx={{
+              bgcolor: "background.paper",
+              borderRadius: 1,
+              p: 0.5,
+              overflow: "hidden",
+            }}
+          >
+            <iframe
+              title="Ticket Preview"
+              src={`${ticketData}#toolbar=0&navpanes=0&statusbar=0`}
+              width="100%"
+              height="450px"
               style={{ border: "none" }}
             />
           </Box>
         </DialogContent>
-        <DialogActions sx={{ justifyContent: "center", gap: 2, pb: 2, flexWrap: "wrap" }}>
-          <Button 
-            variant="outlined" 
-            startIcon={<Receipt />} 
+        <DialogActions
+          sx={{ justifyContent: "center", gap: 2, pb: 2, flexWrap: "wrap" }}
+        >
+          <Button
+            variant="outlined"
+            startIcon={<Receipt />}
             onClick={handleDescargarTicket}
           >
             Descargar Ticket
           </Button>
-          <Button 
-            variant="outlined" 
-            startIcon={<PictureAsPdf />} 
+          <Button
+            variant="outlined"
+            startIcon={<PictureAsPdf />}
             onClick={handleDescargarFactura}
             color="success"
           >
             Descargar Factura
           </Button>
           {ventaCreada?.cliente_email && (
-            <Button 
-              variant="outlined" 
-              startIcon={<Email />} 
+            <Button
+              variant="outlined"
+              startIcon={<Email />}
               onClick={handleEnviarCorreo}
               color="info"
             >
