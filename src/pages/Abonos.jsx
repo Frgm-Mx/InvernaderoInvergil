@@ -28,8 +28,8 @@ const EMPTY = { nombre: "", uso: "", cantidad: "" };
 
 export default function Abonos() {
   const { user } = useAuth();
-  const esAdmin = user?.rol === 'administradora' || user?.rol === 'admin';
-  
+  const esAdmin = user?.rol === "administradora" || user?.rol === "admin";
+
   const [abonos, setAbonos] = useState([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
@@ -56,10 +56,10 @@ export default function Abonos() {
 
   const handleOpen = (item = null) => {
     if (item) {
-      setForm({ 
-        nombre: item.nombre || "", 
-        uso: item.uso || "", 
-        cantidad: item.cantidad || "" 
+      setForm({
+        nombre: item.nombre || "",
+        uso: item.uso || "",
+        cantidad: item.cantidad || "",
       });
       setEditId(item.id);
     } else {
@@ -79,7 +79,8 @@ export default function Abonos() {
     const err = {};
     if (!form.nombre?.trim()) err.nombre = "El nombre es obligatorio";
     if (!form.uso?.trim()) err.uso = "El uso es obligatorio";
-    if (!form.cantidad || form.cantidad <= 0) err.cantidad = "Cantidad debe ser mayor a 0";
+    if (!form.cantidad || form.cantidad <= 0)
+      err.cantidad = "Cantidad debe ser mayor a 0";
     setErrores(err);
     return Object.keys(err).length === 0;
   };
@@ -133,7 +134,14 @@ export default function Abonos() {
 
   return (
     <Box>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <Box>
           <Typography variant="h4" fontWeight={700}>
             Fertilizantes
@@ -143,19 +151,32 @@ export default function Abonos() {
           </Typography>
         </Box>
         {esAdmin && (
-          <Button variant="contained" startIcon={<Add />} onClick={() => handleOpen()} color="success">
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => handleOpen()}
+            color="success"
+          >
             Nuevo Fertilizante
           </Button>
         )}
       </Box>
 
       {msg && (
-        <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setMsg("")}>
+        <Alert
+          severity="success"
+          sx={{ mb: 2, borderRadius: 2 }}
+          onClose={() => setMsg("")}
+        >
           {msg}
         </Alert>
       )}
       {errorGlobal && (
-        <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setErrorGlobal("")}>
+        <Alert
+          severity="error"
+          sx={{ mb: 2, borderRadius: 2 }}
+          onClose={() => setErrorGlobal("")}
+        >
           {errorGlobal}
         </Alert>
       )}
@@ -164,7 +185,9 @@ export default function Abonos() {
         <TableContainer>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ "& th": { fontWeight: 700, bgcolor: "grey.50" } }}>
+              <TableRow
+                sx={{ "& th": { fontWeight: 700, bgcolor: "grey.50" } }}
+              >
                 <TableCell>Nombre</TableCell>
                 <TableCell>Uso / Aplicación</TableCell>
                 <TableCell align="right">Cantidad</TableCell>
@@ -186,7 +209,7 @@ export default function Abonos() {
                   <TableCell>{item.uso || "—"}</TableCell>
                   <TableCell align="right">
                     <Chip
-                      label={`${item.cantidad} ${item.cantidad === 1 ? "unidad" : "unidades"}`}
+                      label={`${item.cantidad} kg`}
                       size="small"
                       color={item.cantidad < 5 ? "error" : "info"}
                       variant="outlined"
@@ -201,7 +224,10 @@ export default function Abonos() {
                     {esAdmin ? (
                       <>
                         <Tooltip title="Editar">
-                          <IconButton size="small" onClick={() => handleOpen(item)}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpen(item)}
+                          >
                             <Edit fontSize="small" />
                           </IconButton>
                         </Tooltip>
@@ -225,7 +251,11 @@ export default function Abonos() {
               ))}
               {abonos.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4, color: "text.secondary" }}>
+                  <TableCell
+                    colSpan={5}
+                    align="center"
+                    sx={{ py: 4, color: "text.secondary" }}
+                  >
                     No hay fertilizantes registrados
                   </TableCell>
                 </TableRow>
@@ -236,8 +266,15 @@ export default function Abonos() {
       </Card>
 
       {/* Dialog para crear/editar */}
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editId ? "Editar Fertilizante" : "Nuevo Fertilizante"}</DialogTitle>
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {editId ? "Editar Fertilizante" : "Nuevo Fertilizante"}
+        </DialogTitle>
         <DialogContent sx={{ pt: "16px !important" }}>
           {errores.global && (
             <Alert severity="error" sx={{ mb: 2 }}>
@@ -273,6 +310,7 @@ export default function Abonos() {
               value={form.cantidad}
               onChange={handleChange}
               error={!!errores.cantidad}
+              cf
               helperText={errores.cantidad}
               inputProps={{ min: 0, step: 0.5 }}
               fullWidth
