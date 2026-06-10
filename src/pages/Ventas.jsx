@@ -38,10 +38,17 @@ import PlantaService from "../services/PlantaService";
 import PagoVentaService from "../services/PagoVentaService";
 import { useAuth } from "../auth/AuthContext";
 import {
+  generarTicketPDF,
   descargarTicket,
   descargarFactura,
   enviarPorCorreo,
 } from "../utils/pdfGenerator";
+
+const iframeStyle = {
+  border: "none",
+  borderRadius: "4px",
+  backgroundColor: "#fff"
+};
 
 export default function Ventas() {
   const { user } = useAuth();
@@ -51,12 +58,17 @@ export default function Ventas() {
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const [todasLasPlantas, setTodasLasPlantas] = useState([]);
 
-
   // Detalle dialog
   const [detailOpen, setDetailOpen] = useState(false);
   const [detalles, setDetalles] = useState([]);
   const [pagos, setPagos] = useState([]);
   const [ventaSel, setVentaSel] = useState(null);
+
+  // Ticket preview dialog
+  const [ticketPreviewOpen, setTicketPreviewOpen] = useState(false);
+  const [ticketPreviewData, setTicketPreviewData] = useState("");
+  const [ventaActual, setVentaActual] = useState(null);
+  const [cargandoTicket, setCargandoTicket] = useState(false);
 
   // Pago adicional dialog
   const [pagoOpen, setPagoOpen] = useState(false);
@@ -75,17 +87,17 @@ export default function Ventas() {
     setPlantas(p);
   };
 
-useEffect(() => {
-  const loadAll = async () => {
-    const [v, p] = await Promise.all([
-      VentaService.getAll(),
-      PlantaService.getAllIncludingInactive(), // Nuevo método
-    ]);
-    setVentas(v);
-    setTodasLasPlantas(p);
-  };
-  loadAll().catch(() => {});
-}, []);
+  useEffect(() => {
+    const loadAll = async () => {
+      const [v, p] = await Promise.all([
+        VentaService.getAll(),
+        PlantaService.getAllIncludingInactive(),
+      ]);
+      setVentas(v);
+      setTodasLasPlantas(p);
+    };
+    loadAll().catch(() => {});
+  }, []);
 
   const filtered =
     filtro === "todas"
@@ -96,57 +108,103 @@ useEffect(() => {
           ? ventas.filter((v) => v.estado === filtro)
           : ventas.filter((v) => v.forma_pago === filtro);
 
-const verDetalle = async (venta) => {
-  // Guardar el ID de la venta que queremos ver
-  const ventaId = venta.id;
-  
-  // Limpiar completamente los estados
-  setDetalles([]);
-  setPagos([]);
-  setVentaSel(null);
-  setCargandoDetalle(true);
-  
-  // Abrir el diálogo SOLO después de limpiar
-  setDetailOpen(true);
-  
-  try {
-    // Cargar datos en paralelo
-    const [d, p] = await Promise.all([
-      DetalleVentaService.getByVenta(ventaId),
-      PagoVentaService.getByVenta(ventaId),
-    ]);
+  const verDetalle = async (venta) => {
+    const ventaId = venta.id;
     
-    // Verificar que todavía sea la misma venta (por si el usuario abrió otra)
-    if (ventaSel?.id === ventaId || !ventaSel) {
-      setDetalles(d || []);
-      setPagos(p || []);
-      setVentaSel(venta);
-    }
-  } catch (error) {
-    console.error('Error cargando detalles:', error);
     setDetalles([]);
     setPagos([]);
-  } finally {
-    setCargandoDetalle(false);
-  }
-};
-
-const getNombrePlanta = (planta) => {
-  // Si planta es un objeto con nombre
-  if (planta && typeof planta === 'object') {
-    if (planta.nombre) return planta.nombre;
-    if (planta.id) {
-      const encontrada = plantas.find(p => p.id === planta.id);
-      return encontrada?.nombre || `Planta #${planta.id}`;
+    setVentaSel(null);
+    setCargandoDetalle(true);
+    setDetailOpen(true);
+    
+    try {
+      const [d, p] = await Promise.all([
+        DetalleVentaService.getByVenta(ventaId),
+        PagoVentaService.getByVenta(ventaId),
+      ]);
+      
+      if (ventaSel?.id === ventaId || !ventaSel) {
+        setDetalles(d || []);
+        setPagos(p || []);
+        setVentaSel(venta);
+      }
+    } catch (error) {
+      console.error('Error cargando detalles:', error);
+      setDetalles([]);
+      setPagos([]);
+    } finally {
+      setCargandoDetalle(false);
     }
-  }
-  // Si es un número (ID)
-  if (typeof planta === 'number') {
-    const encontrada = plantas.find(p => p.id === planta);
-    return encontrada?.nombre || `Planta #${planta}`;
-  }
-  return `Planta desconocida`;
-};
+  };
+
+  // Función para ver ticket (sin descargar)
+  const verTicket = async (venta) => {
+    setVentaActual(venta);
+    setCargandoTicket(true);
+    setTicketPreviewOpen(true);
+    
+    try {
+      const [d, p] = await Promise.all([
+        DetalleVentaService.getByVenta(venta.id),
+        PagoVentaService.getByVenta(venta.id),
+      ]);
+      
+      const detallesConNombre = d.map(det => ({
+        ...det,
+        nombre_planta: getNombrePlanta(det.id_planta)
+      }));
+      
+      const doc = generarTicketPDF({
+        venta: venta,
+        detalles: detallesConNombre,
+        pagos: p,
+        vendedor: user?.nombre || "Admin"
+      });
+      
+      setTicketPreviewData(doc.output("datauristring"));
+    } catch (error) {
+      console.error("Error generando ticket:", error);
+      alert("Error al generar el ticket");
+      setTicketPreviewOpen(false);
+    } finally {
+      setCargandoTicket(false);
+    }
+  };
+
+  // Función para descargar factura directamente
+  const descargarFacturaDirecto = async (venta) => {
+    try {
+      const [d, p] = await Promise.all([
+        DetalleVentaService.getByVenta(venta.id),
+        PagoVentaService.getByVenta(venta.id),
+      ]);
+      
+      const detallesConNombre = d.map(det => ({
+        ...det,
+        nombre_planta: getNombrePlanta(det.id_planta)
+      }));
+      
+      await descargarFactura(venta, detallesConNombre, p, user?.nombre);
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error al generar la factura");
+    }
+  };
+
+  const getNombrePlanta = (planta) => {
+    if (planta && typeof planta === 'object') {
+      if (planta.nombre) return planta.nombre;
+      if (planta.id) {
+        const encontrada = plantas.find(p => p.id === planta.id);
+        return encontrada?.nombre || `Planta #${planta.id}`;
+      }
+    }
+    if (typeof planta === 'number') {
+      const encontrada = plantas.find(p => p.id === planta);
+      return encontrada?.nombre || `Planta #${planta}`;
+    }
+    return `Planta desconocida`;
+  };
 
   const formatFecha = (f) => {
     const d = new Date(f);
@@ -186,7 +244,6 @@ const getNombrePlanta = (planta) => {
       );
   };
 
-  // Registrar pago adicional (para ventas con anticipo)
   const abrirPago = () => {
     setPagoMonto("");
     setPagoForma("efectivo");
@@ -210,14 +267,11 @@ const getNombrePlanta = (planta) => {
       return;
     }
 
-    // El cambio solo aplica si es efectivo
     const cambio =
       pagoForma === "efectivo" && montoIngresado > saldoActual
         ? montoIngresado - saldoActual
         : 0;
 
-    // Si es efectivo, a la caja solo entran los bytes del saldo neto.
-    // Si es transferencia, registramos el valor real transferido.
     const montoRealARegistrar =
       pagoForma === "efectivo" ? saldoActual : montoIngresado;
 
@@ -229,7 +283,6 @@ const getNombrePlanta = (planta) => {
           ? `Pago final — liquidación · Cambio: $${cambio.toFixed(2)}`
           : "Pago final — liquidación");
 
-      // 1. Crear el registro del Pago
       await PagoVentaService.create({
         id_venta: ventaSel.id,
         fecha: new Date().toISOString(),
@@ -240,7 +293,6 @@ const getNombrePlanta = (planta) => {
         cambio: cambio,
       });
 
-      // 2. Calcular los nuevos impactos financieros de la venta
       const nuevoMontoPagado =
         Number(ventaSel.monto_pagado) + montoRealARegistrar;
       const nuevoSaldo = Math.max(0, saldoActual - montoRealARegistrar);
@@ -252,14 +304,11 @@ const getNombrePlanta = (planta) => {
         estado: nuevoSaldo <= 0 ? "pagada" : "con_anticipo",
       };
 
-      // 3. Persistir en el servidor
       await VentaService.update(ventaSel.id, ventaActualizadaPayload);
 
-      // 4. Sincronizar estados locales de forma segura
       setPagoOpen(false);
-      await load(); // Recarga la lista maestra del fondo
+      await load();
 
-      // Actualizar la vista del detalle actual con el payload verificado
       setVentaSel(ventaActualizadaPayload);
 
       const historialPagosActualizado = await PagoVentaService.getByVenta(
@@ -364,11 +413,23 @@ const getNombrePlanta = (planta) => {
                   </TableCell>
                   <TableCell>{v.nota_remision || "—"}</TableCell>
                   <TableCell align="center">
-                    <Tooltip title="Ver detalle">
-                      <IconButton size="small" onClick={() => verDetalle(v)}>
-                        <Visibility fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                    <Box sx={{ display: "flex", gap: 0.5, justifyContent: "center" }}>
+                      <Tooltip title="Ver Ticket">
+                        <IconButton size="small" onClick={() => verTicket(v)}>
+                          <Receipt fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Descargar Factura">
+                        <IconButton size="small" color="success" onClick={() => descargarFacturaDirecto(v)}>
+                          <PictureAsPdf fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Ver Detalle">
+                        <IconButton size="small" onClick={() => verDetalle(v)}>
+                          <Visibility fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
@@ -389,186 +450,260 @@ const getNombrePlanta = (planta) => {
       </Card>
 
       {/* DIALOG DETALLE */}
-      {/* DIALOG DETALLE */}
-<Dialog
-  open={detailOpen}
-  onClose={() => setDetailOpen(false)}
-  maxWidth="sm"
-  fullWidth
->
-  <DialogTitle>
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}
-    >
-      <Typography variant="h6">
-        {cargandoDetalle ? "Cargando..." : `Venta #${ventaSel?.id || ''}`}
-      </Typography>
-      {!cargandoDetalle && ventaSel && (
-        <Chip
-          label={ventaSel.estado === "pagada" ? "PAGADA" : "CON ANTICIPO"}
-          color={ventaSel.estado === "pagada" ? "success" : "warning"}
-          size="small"
-        />
-      )}
-    </Box>
-  </DialogTitle>
-  <DialogContent>
-    {cargandoDetalle ? (
-      <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-        <Typography>Cargando detalles de la venta...</Typography>
-      </Box>
-    ) : (
-      <>
-        {ventaSel && (
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="body2">
-              Fecha: {formatFecha(ventaSel.fecha)}
+      <Dialog
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Typography variant="h6">
+              {cargandoDetalle ? "Cargando..." : `Venta #${ventaSel?.id || ''}`}
             </Typography>
-            <Typography variant="body2">
-              Cliente: {ventaSel.cliente_nombre || "Público general"}
-            </Typography>
-            <Typography variant="body2">
-              Pago: {ventaSel.forma_pago} · Tipo: {ventaSel.tipo_venta}
-            </Typography>
-            {ventaSel.nota_remision && (
-              <Typography variant="body2">
-                Nota: {ventaSel.nota_remision}
-              </Typography>
-            )}
-            {ventaSel.observaciones && (
-              <Typography variant="body2">
-                Obs: {ventaSel.observaciones}
-              </Typography>
+            {!cargandoDetalle && ventaSel && (
+              <Chip
+                label={ventaSel.estado === "pagada" ? "PAGADA" : "CON ANTICIPO"}
+                color={ventaSel.estado === "pagada" ? "success" : "warning"}
+                size="small"
+              />
             )}
           </Box>
-        )}
-        <Divider />
+        </DialogTitle>
+        <DialogContent>
+          {cargandoDetalle ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <Typography>Cargando detalles de la venta...</Typography>
+            </Box>
+          ) : (
+            <>
+              {ventaSel && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    Fecha: {formatFecha(ventaSel.fecha)}
+                  </Typography>
+                  <Typography variant="body2">
+                    Cliente: {ventaSel.cliente_nombre || "Público general"}
+                  </Typography>
+                  <Typography variant="body2">
+                    Pago: {ventaSel.forma_pago} · Tipo: {ventaSel.tipo_venta}
+                  </Typography>
+                  {ventaSel.nota_remision && (
+                    <Typography variant="body2">
+                      Nota: {ventaSel.nota_remision}
+                    </Typography>
+                  )}
+                  {ventaSel.observaciones && (
+                    <Typography variant="body2">
+                      Obs: {ventaSel.observaciones}
+                    </Typography>
+                  )}
+                </Box>
+              )}
+              <Divider />
 
-        {/* Productos */}
-        <List dense>
-          {detalles.map((d) => (
-            <ListItem key={d.id}>
-              <ListItemText
-                primary={getNombrePlanta(d.id_planta)}
-                secondary={`${d.cantidad} × $${Number(d.precio_unitario).toFixed(2)}`}
-              />
-              <Typography fontWeight={600}>
-                ${Number(d.subtotal).toFixed(2)}
-              </Typography>
-            </ListItem>
-          ))}
-          {detalles.length === 0 && !cargandoDetalle && (
-            <ListItem>
-              <ListItemText 
-                primary="No hay productos en esta venta"
-                secondary="Puede que los detalles no se hayan cargado correctamente"
-              />
-            </ListItem>
+              {/* Productos */}
+              <List dense>
+                {detalles.map((d) => (
+                  <ListItem key={d.id}>
+                    <ListItemText
+                      primary={getNombrePlanta(d.id_planta)}
+                      secondary={`${d.cantidad} × $${Number(d.precio_unitario).toFixed(2)}`}
+                    />
+                    <Typography fontWeight={600}>
+                      ${Number(d.subtotal).toFixed(2)}
+                    </Typography>
+                  </ListItem>
+                ))}
+                {detalles.length === 0 && !cargandoDetalle && (
+                  <ListItem>
+                    <ListItemText 
+                      primary="No hay productos en esta venta"
+                      secondary="Puede que los detalles no se hayan cargado correctamente"
+                    />
+                  </ListItem>
+                )}
+              </List>
+              <Divider />
+
+              {/* Totales */}
+              <Box sx={{ mt: 1, mb: 1 }}>
+                <Typography variant="h6" textAlign="right">
+                  Total: ${Number(ventaSel?.total || 0).toFixed(2)}
+                </Typography>
+                {ventaSel && Number(ventaSel.saldo_pendiente || 0) > 0 && (
+                  <Box sx={{ textAlign: "right" }}>
+                    <Typography variant="body2">
+                      Pagado: ${Number(ventaSel.monto_pagado).toFixed(2)}
+                    </Typography>
+                    <Typography variant="body2" color="error" fontWeight={700}>
+                      Saldo pendiente: $
+                      {Number(ventaSel.saldo_pendiente).toFixed(2)}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+
+              {/* Historial de pagos */}
+              {pagos.length > 0 && (
+                <>
+                  <Divider sx={{ my: 1 }} />
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Historial de pagos
+                  </Typography>
+                  <List dense>
+                    {pagos.map((p) => (
+                      <ListItem
+                        key={p.id}
+                        sx={{ bgcolor: "grey.50", borderRadius: 1, mb: 0.5 }}
+                      >
+                        <ListItemText
+                          primary={`${p.tipo === "anticipo" ? "Anticipo" : p.tipo === "pago_final" ? "Pago final" : p.tipo === "abono" ? "Abono" : "Pago"} — ${p.forma_pago}`}
+                          secondary={`${formatFecha(p.fecha)}${p.nota ? ` · ${p.nota}` : ""}`}
+                        />
+                        <Typography fontWeight={600} color="success.main">
+                          ${Number(p.monto).toFixed(2)}
+                        </Typography>
+                      </ListItem>
+                    ))}
+                  </List>
+                </>
+              )}
+
+              {/* Botones de acción */}
+              <Divider sx={{ my: 2 }} />
+              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<Receipt />}
+                  onClick={handleDescargarTicket}
+                  disabled={!ventaSel}
+                >
+                  Ticket
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<PictureAsPdf />}
+                  onClick={handleDescargarFactura}
+                  color="success"
+                  disabled={!ventaSel}
+                >
+                  Factura
+                </Button>
+                {ventaSel?.cliente_email && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<Email />}
+                    onClick={handleEnviarCorreo}
+                    color="info"
+                    disabled={!ventaSel}
+                  >
+                    Enviar correo
+                  </Button>
+                )}
+                {ventaSel && Number(ventaSel.saldo_pendiente || 0) > 0 && (
+                  <Button
+                    size="small"
+                    variant="contained"
+                    startIcon={<Payment />}
+                    onClick={abrirPago}
+                    color="warning"
+                  >
+                    Registrar pago
+                  </Button>
+                )}
+              </Box>
+            </>
           )}
-        </List>
-        <Divider />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailOpen(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
 
-        {/* Totales */}
-        <Box sx={{ mt: 1, mb: 1 }}>
-          <Typography variant="h6" textAlign="right">
-            Total: ${Number(ventaSel?.total || 0).toFixed(2)}
-          </Typography>
-          {ventaSel && Number(ventaSel.saldo_pendiente || 0) > 0 && (
-            <Box sx={{ textAlign: "right" }}>
-              <Typography variant="body2">
-                Pagado: ${Number(ventaSel.monto_pagado).toFixed(2)}
-              </Typography>
-              <Typography variant="body2" color="error" fontWeight={700}>
-                Saldo pendiente: $
-                {Number(ventaSel.saldo_pendiente).toFixed(2)}
-              </Typography>
+      {/* DIALOG PARA VER TICKET (sin descargar) */}
+      <Dialog
+        open={ticketPreviewOpen}
+        onClose={() => setTicketPreviewOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ textAlign: "center" }}>
+          <Receipt sx={{ fontSize: 40, color: "success.main", mb: 1 }} />
+          <Typography variant="h6">Ticket - Venta #{ventaActual?.id}</Typography>
+          {ventaActual?.nota_remision && (
+            <Typography variant="caption" color="text.secondary">
+              Nota: {ventaActual.nota_remision}
+            </Typography>
+          )}
+        </DialogTitle>
+        <DialogContent>
+          {cargandoTicket ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+              <Typography>Generando ticket...</Typography>
+            </Box>
+          ) : (
+            <Box sx={{ bgcolor: "background.paper", borderRadius: 1, p: 0.5, overflow: "hidden" }}>
+              <iframe 
+                title="Ticket Preview" 
+                src={`${ticketPreviewData}#toolbar=0&navpanes=0&statusbar=0`} 
+                width="100%" 
+                height="450px" 
+                style={iframeStyle}
+              />
             </Box>
           )}
-        </Box>
-
-        {/* Historial de pagos */}
-        {pagos.length > 0 && (
-          <>
-            <Divider sx={{ my: 1 }} />
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Historial de pagos
-            </Typography>
-            <List dense>
-              {pagos.map((p) => (
-                <ListItem
-                  key={p.id}
-                  sx={{ bgcolor: "grey.50", borderRadius: 1, mb: 0.5 }}
-                >
-                  <ListItemText
-                    primary={`${p.tipo === "anticipo" ? "Anticipo" : p.tipo === "pago_final" ? "Pago final" : p.tipo === "abono" ? "Abono" : "Pago"} — ${p.forma_pago}`}
-                    secondary={`${formatFecha(p.fecha)}${p.nota ? ` · ${p.nota}` : ""}`}
-                  />
-                  <Typography fontWeight={600} color="success.main">
-                    ${Number(p.monto).toFixed(2)}
-                  </Typography>
-                </ListItem>
-              ))}
-            </List>
-          </>
-        )}
-
-        {/* Botones de acción */}
-        <Divider sx={{ my: 2 }} />
-        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<Receipt />}
-            onClick={handleDescargarTicket}
-            disabled={!ventaSel}
-          >
-            Ticket
-          </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<PictureAsPdf />}
-            onClick={handleDescargarFactura}
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "center", gap: 2, pb: 2 }}>
+          <Button 
+            variant="outlined" 
+            startIcon={<PictureAsPdf />} 
+            onClick={() => {
+              if (ventaActual) {
+                descargarFacturaDirecto(ventaActual);
+              }
+            }}
             color="success"
-            disabled={!ventaSel}
           >
-            Factura
+            Descargar Factura
           </Button>
-          {ventaSel?.cliente_email && (
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<Email />}
-              onClick={handleEnviarCorreo}
+          <Button 
+            variant="outlined" 
+            startIcon={<Receipt />} 
+            onClick={() => {
+              if (ventaActual) {
+                descargarTicket(ventaActual, getDetallesConNombre(), pagos, user?.nombre);
+              }
+            }}
+          >
+            Descargar Ticket
+          </Button>
+          {ventaActual?.cliente_email && (
+            <Button 
+              variant="outlined" 
+              startIcon={<Email />} 
+              onClick={() => {
+                if (ventaActual) {
+                  enviarPorCorreo(ventaActual, getDetallesConNombre(), pagos, user?.nombre, ventaActual.cliente_email);
+                }
+              }}
               color="info"
-              disabled={!ventaSel}
             >
-              Enviar correo
+              Enviar por Correo
             </Button>
           )}
-          {ventaSel && Number(ventaSel.saldo_pendiente || 0) > 0 && (
-            <Button
-              size="small"
-              variant="contained"
-              startIcon={<Payment />}
-              onClick={abrirPago}
-              color="warning"
-            >
-              Registrar pago
-            </Button>
-          )}
-        </Box>
-      </>
-    )}
-  </DialogContent>
-  <DialogActions>
-    <Button onClick={() => setDetailOpen(false)}>Cerrar</Button>
-  </DialogActions>
-</Dialog>
+          <Button onClick={() => setTicketPreviewOpen(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* DIALOG REGISTRAR PAGO ADICIONAL */}
       <Dialog
@@ -623,7 +758,7 @@ const getNombrePlanta = (planta) => {
                   mb: 2,
                   p: 1,
                   bgcolor: "success.main",
-                  color: "success.contrastText", // Asegura legibilidad total
+                  color: "success.contrastText",
                   borderRadius: 1,
                 }}
               >

@@ -81,15 +81,13 @@ export function generarTicketPDF({ venta, detalles, pagos = [], vendedor = '' })
   doc.line(margen, y, W - margen, y)
   y += 3
 
-  // === TABLA DE PRODUCTOS (CORREGIDA) ===
+  // === TABLA DE PRODUCTOS ===
   doc.autoTable({
     startY: y,
     margin: { left: margen, right: margen },
-    // Reducimos sutilmente el padding horizontal interno para ganar valiosos milímetros
     styles: { fontSize: 6.5, cellPadding: 1.0, lineColor: [200, 200, 200], lineWidth: 0.1, overflow: 'linebreak' },
     headStyles: { fillColor: [46, 125, 50], textColor: 255, fontStyle: 'bold', fontSize: 6.5 },
     columnStyles: {
-      // Dejamos que la columna 0 (Producto) sea elástica y ocupe el espacio sobrante de forma automática
       1: { halign: 'center', cellWidth: 10 }, // Cant
       2: { halign: 'right', cellWidth: 13 },  // P.Unit
       3: { halign: 'right', cellWidth: 15 },  // Subtotal
@@ -187,8 +185,6 @@ export function generarTicketPDF({ venta, detalles, pagos = [], vendedor = '' })
 
   return doc
 }
-
-// ... Mantener abajo tus funciones de generarFacturaPDF, descargarTicket, descargarFactura y enviarPorCorreo intactas.
 
 /**
  * Genera una factura formal en formato carta
@@ -351,7 +347,7 @@ export function generarFacturaPDF({ venta, detalles, pagos = [], vendedor = '' }
       head: [['Fecha', 'Tipo', 'Forma de Pago', 'Monto', 'Nota']],
       body: pagos.map((p) => [
         new Date(p.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
-        p.tipo === 'anticipo' ? 'Anticipo' : 'Pago',
+        p.tipo === 'anticipo' ? 'Anticipo' : p.tipo === 'pago_final' ? 'Pago Final' : 'Pago',
         p.forma_pago,
         `$${Number(p.monto).toFixed(2)}`,
         p.nota || '—',
@@ -366,12 +362,13 @@ export function generarFacturaPDF({ venta, detalles, pagos = [], vendedor = '' }
     doc.setFontSize(8)
     doc.text('Observaciones:', margen, y)
     doc.setFont('helvetica', 'normal')
-    doc.text(venta.observaciones, margen + 25, y)
-    y += 8
+    const obsLines = doc.splitTextToSize(venta.observaciones, W - margen * 2 - 25)
+    doc.text(obsLines, margen + 25, y)
+    y += obsLines.length * 4 + 4
   }
 
   // === PIE ===
-  const pieY = 260
+  const pieY = y > 260 ? y + 10 : 260
   doc.setDrawColor(46, 125, 50)
   doc.setLineWidth(0.5)
   doc.line(margen, pieY, W - margen, pieY)
@@ -385,7 +382,7 @@ export function generarFacturaPDF({ venta, detalles, pagos = [], vendedor = '' }
 }
 
 /**
- * Descarga el PDF al servidor (se guarda automáticamente en C:\Users\pakog\Tickets)
+ * Descarga el ticket PDF directamente en el navegador
  */
 export async function descargarTicket(venta, detalles, pagos, vendedor) {
   try {
@@ -398,15 +395,17 @@ export async function descargarTicket(venta, detalles, pagos, vendedor) {
     const ventaNormalizada = { ...venta, id: idVenta };
     const doc = generarTicketPDF({ venta: ventaNormalizada, detalles, pagos, vendedor });
     
-    // Descargar directamente en el navegador
     doc.save(`ticket_${idVenta}.pdf`);
     alert(`✓ Ticket descargado: ticket_${idVenta}.pdf`);
   } catch (error) {
     console.error('Error:', error);
-    alert('Error al generar el PDF');
+    alert('Error al generar el ticket');
   }
 }
 
+/**
+ * Descarga la factura PDF directamente en el navegador
+ */
 export async function descargarFactura(venta, detalles, pagos, vendedor) {
   try {
     const idVenta = venta.id || venta.id_venta || venta.Id;
@@ -418,15 +417,17 @@ export async function descargarFactura(venta, detalles, pagos, vendedor) {
     const ventaNormalizada = { ...venta, id: idVenta };
     const doc = generarFacturaPDF({ venta: ventaNormalizada, detalles, pagos, vendedor });
     
-    // Descargar directamente en el navegador
     doc.save(`factura_${idVenta}.pdf`);
     alert(`✓ Factura descargada: factura_${idVenta}.pdf`);
   } catch (error) {
     console.error('Error:', error);
-    alert('Error al generar el PDF');
+    alert('Error al generar la factura');
   }
 }
 
+/**
+ * Abre el cliente de correo con la factura adjunta (descarga previa)
+ */
 export async function enviarPorCorreo(venta, detalles, pagos, vendedor, email = '') {
   try {
     const idVenta = venta.id || venta.id_venta || venta.Id;
@@ -435,12 +436,16 @@ export async function enviarPorCorreo(venta, detalles, pagos, vendedor, email = 
       return;
     }
     
-    // Generar PDF y descargar localmente
+    if (!email) {
+      alert("Error: No hay correo electrónico registrado para este cliente.");
+      return;
+    }
+    
     const ventaNormalizada = { ...venta, id: idVenta };
     const doc = generarFacturaPDF({ venta: ventaNormalizada, detalles, pagos, vendedor });
     
-    // Descargar el PDF
-    doc.save(`factura_${idVenta}.pdf`);
+    // Descargar una copia local que el usuario podrá adjuntar
+    doc.save(`factura_${idVenta}_para_envio.pdf`);
     
     // Abrir cliente de correo
     const numTicket = String(idVenta).padStart(4, '0');
@@ -448,15 +453,43 @@ export async function enviarPorCorreo(venta, detalles, pagos, vendedor, email = 
     const cuerpo = encodeURIComponent(
       `Estimado cliente,\n\nAdjunto encontrará la factura #${numTicket} ` +
       `por un total de $${Number(venta.total).toFixed(2)}.\n\n` +
-      `Por favor revise el archivo PDF adjunto.\n\n` +
-      `Gracias por su preferencia.\nVivero Invergil`
+      `Nota de remisión: ${venta.nota_remision || 'N/A'}\n\n` +
+      `Gracias por su preferencia.\n\n` +
+      `Atentamente,\nVivero Invergil`
     );
+    
     const mailto = `mailto:${email}?subject=${asunto}&body=${cuerpo}`;
     window.open(mailto, '_blank');
     
-    alert(`✓ Factura generada: factura_${idVenta}.pdf`);
+    alert(`✓ Se ha abierto su cliente de correo.\n\nPor favor adjunte el archivo "factura_${idVenta}_para_envio.pdf" que se acaba de descargar.`);
   } catch (error) {
     console.error('Error:', error);
-    alert('Error al generar el PDF');
+    alert('Error al generar el PDF para correo');
+  }
+}
+
+/**
+ * Genera el ticket y lo devuelve como data URL (para vista previa)
+ */
+export function generarTicketDataURL(venta, detalles, pagos, vendedor) {
+  try {
+    const doc = generarTicketPDF({ venta, detalles, pagos, vendedor });
+    return doc.output("datauristring");
+  } catch (error) {
+    console.error('Error generando ticket:', error);
+    return "";
+  }
+}
+
+/**
+ * Genera la factura y la devuelve como data URL (para vista previa)
+ */
+export function generarFacturaDataURL(venta, detalles, pagos, vendedor) {
+  try {
+    const doc = generarFacturaPDF({ venta, detalles, pagos, vendedor });
+    return doc.output("datauristring");
+  } catch (error) {
+    console.error('Error generando factura:', error);
+    return "";
   }
 }

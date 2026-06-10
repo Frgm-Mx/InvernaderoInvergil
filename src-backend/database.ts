@@ -23,7 +23,7 @@ export const AppDataSource = new DataSource({
         database: process.env.DB_NAME || 'vivero_invergil',
       }
   ),
-  synchronize: !isProduction,
+  synchronize: true,
   logging: !isProduction,
   entities: [Usuario, Planta, Venta, DetalleVenta, Abono, PagoVenta],
   migrations: ['src-backend/migrations/**/*.ts'],

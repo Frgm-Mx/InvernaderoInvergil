@@ -5,7 +5,7 @@ import {
   FormControlLabel, Collapse, Chip, Paper, Dialog, DialogTitle, DialogContent, DialogActions
 } from "@mui/material";
 import Grid2 from "@mui/material/Grid2"; 
-import { Delete, Add, ShoppingCart, Receipt, PictureAsPdf, Email } from "@mui/icons-material";
+import { Delete, Add, ShoppingCart, Receipt, PictureAsPdf, Email, Visibility } from "@mui/icons-material";
 
 import { useAuth } from "../auth/AuthContext";
 import PlantaService from "../services/PlantaService";
@@ -14,7 +14,8 @@ import DetalleVentaService from "../services/DetalleVentaService";
 import PagoVentaService from "../services/PagoVentaService";
 
 import {
-  generarTicketPDF, 
+  generarTicketPDF,
+  generarFacturaPDF,
   descargarTicket,
   descargarFactura,
   enviarPorCorreo
@@ -49,10 +50,14 @@ export default function NuevaVenta() {
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Guardamos también los datos estáticos procesados para que el diálogo no dependa de estados volátiles limpiados
+  // Estados para el diálogo post-venta
   const [ventaCreada, setVentaCreada] = useState(null);
   const [detallesCreados, setDetallesCreados] = useState([]);
   const [postDialog, setPostDialog] = useState(false);
+  
+  // Estado para el ticket emergente
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const [ticketData, setTicketData] = useState("");
 
   useEffect(() => {
     PlantaService.getAll()
@@ -71,17 +76,114 @@ export default function NuevaVenta() {
         } else {
           copy[idx].precio_unitario = 0;
         }
+        // Validar stock en tiempo real
+        if (planta && Number(copy[idx].cantidad) > planta.cantidad) {
+          setErrores(prev => ({ ...prev, [`linea_${idx}`]: `Stock insuficiente. Disponible: ${planta.cantidad}` }));
+        } else {
+          setErrores(prev => {
+            const newErrores = { ...prev };
+            delete newErrores[`linea_${idx}`];
+            return newErrores;
+          });
+        }
       } else {
         copy[idx][field] = value === "" ? "" : Number(value);
+        
+        // Validar cantidad en tiempo real
+        if (field === "cantidad") {
+          const cantidadNum = Number(value);
+          const plantaId = copy[idx].id_planta;
+          const planta = plantas.find((p) => p.id === Number(plantaId));
+          
+          if (planta && cantidadNum > planta.cantidad) {
+            setErrores(prev => ({ ...prev, [`linea_${idx}`]: `Stock insuficiente. Disponible: ${planta.cantidad}` }));
+          } else if (isNaN(cantidadNum) || cantidadNum <= 0) {
+            setErrores(prev => ({ ...prev, [`linea_${idx}`]: "Cantidad debe ser mayor a 0" }));
+          } else if (!Number.isInteger(cantidadNum)) {
+            setErrores(prev => ({ ...prev, [`linea_${idx}`]: "Cantidad debe ser un número entero" }));
+          } else {
+            setErrores(prev => {
+              const newErrores = { ...prev };
+              delete newErrores[`linea_${idx}`];
+              return newErrores;
+            });
+          }
+        }
+        
+        // Validar precio en tiempo real
+        if (field === "precio_unitario") {
+          const precioNum = Number(value);
+          if (isNaN(precioNum) || precioNum <= 0) {
+            setErrores(prev => ({ ...prev, [`linea_${idx}`]: "Precio inválido" }));
+          } else {
+            setErrores(prev => {
+              const newErrores = { ...prev };
+              delete newErrores[`linea_${idx}`];
+              return newErrores;
+            });
+          }
+        }
       }
       return copy;
     });
+  };
 
-    setErrores((p) => {
-      const c = { ...p };
-      delete c[`linea_${idx}`];
-      return c;
-    });
+  // Validación en tiempo real para campos de cliente y pagos
+  const validarCampoEnTiempoReal = (campo, valor) => {
+    const nuevosErrores = { ...errores };
+    
+    switch (campo) {
+      case 'telefono':
+        const telefonoLimpio = valor.replace(/[\s-]/g, "");
+        if (valor && (!/^\d+$/.test(telefonoLimpio))) {
+          nuevosErrores.telefono = "El teléfono solo debe contener números";
+        } else if (valor && (telefonoLimpio.length < 10 || telefonoLimpio.length > 13)) {
+          nuevosErrores.telefono = "El teléfono debe tener entre 10 y 13 dígitos";
+        } else {
+          delete nuevosErrores.telefono;
+        }
+        break;
+        
+      case 'email':
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (valor && !emailRegex.test(valor.trim())) {
+          nuevosErrores.email = "El formato del correo electrónico no es válido";
+        } else {
+          delete nuevosErrores.email;
+        }
+        break;
+        
+      case 'montoPagado':
+        if (!esAnticipo && formaPago === "efectivo") {
+          const pagadoNum = Number(valor);
+          if (valor && pagadoNum < total) {
+            nuevosErrores.montoPagado = `Efectivo insuficiente. Faltan $${(total - pagadoNum).toFixed(2)}`;
+          } else if (valor && pagadoNum > total * 5) {
+            nuevosErrores.montoPagado = "El monto ingresado parece excesivo para el total de la orden";
+          } else {
+            delete nuevosErrores.montoPagado;
+          }
+        }
+        break;
+        
+      case 'montoAnticipo':
+        if (esAnticipo) {
+          const anticipoNum = Number(valor);
+          if (valor && (isNaN(anticipoNum) || anticipoNum <= 0)) {
+            nuevosErrores.anticipo = "El monto del anticipo debe ser mayor a $0";
+          } else if (valor && anticipoNum >= total) {
+            nuevosErrores.anticipo = "El anticipo no puede ser igual o mayor al total";
+          } else {
+            delete nuevosErrores.anticipo;
+          }
+        }
+        break;
+        
+      default:
+        break;
+    }
+    
+    setErrores(nuevosErrores);
   };
 
   const addLine = () => setLineas((prev) => [...prev, { ...EMPTY_LINE }]);
@@ -134,7 +236,7 @@ export default function NuevaVenta() {
       fecha: new Date().toISOString(),
       forma_pago: formaPago,
       tipo_venta: tipoVenta,
-      nota_remision: notaRemision,
+      nota_remision: notaRemision || "Se generará automáticamente",
       cliente_nombre: clienteNombre.trim(),
       cliente_telefono: clienteTelefono.trim(),
       cliente_email: clienteEmail.trim(),
@@ -235,22 +337,6 @@ export default function NuevaVenta() {
       }
     }
 
-    const telefonoLimpio = clienteTelefono.replace(/[\s-]/g, "");
-    if (clienteTelefono) {
-      if (!/^\d+$/.test(telefonoLimpio)) {
-        err.telefono = "El teléfono solo debe contener números";
-      } else if (telefonoLimpio.length < 10 || telefonoLimpio.length > 13) {
-        err.telefono = "El teléfono debe tener entre 10 y 13 dígitos";
-      }
-    }
-
-    if (clienteEmail) {
-      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (!emailRegex.test(clienteEmail.trim())) {
-        err.email = "El formato del correo electrónico no es válido";
-      }
-    }
-
     if (total <= 0) err.total = "Agrega al menos un producto";
 
     setErrores(err);
@@ -269,14 +355,14 @@ export default function NuevaVenta() {
       const montoPagadoVal = esAnticipo ? anticipoMonto : total;
       const saldoPendiente = total - montoPagadoVal;
 
-      // 1. Crear venta en Backend
+      // 1. Crear venta en Backend (la nota de remisión la genera el backend)
       const venta = await VentaService.create({
         fecha: new Date().toISOString(),
         total,
         forma_pago: formaPago,
         tipo_venta: tipoVenta,
         id_usuario: user?.id || 1,
-        nota_remision: notaRemision,
+        // nota_remision ya no se envía, el backend la genera automáticamente
         observaciones,
         anticipo: anticipoMonto,
         monto_pagado: montoPagadoVal,
@@ -287,8 +373,6 @@ export default function NuevaVenta() {
         cliente_email: clienteEmail.trim().toLowerCase(),
       });
       
-
-      // Asegurar que usemos el ID real devuelto por la base de datos
       const idVentaGenerada = venta.id || venta.id_venta;
 
       // 2. Crear detalles en Backend
@@ -308,7 +392,7 @@ export default function NuevaVenta() {
           ? `Pago total · Cambio: $${cambioVal.toFixed(2)}`
           : "Pago total";
 
-      await PagoVentaService.create({
+      const pagoRegistrado = await PagoVentaService.create({
         id_venta: idVentaGenerada,
         fecha: new Date().toISOString(),
         monto: montoPagadoVal,
@@ -318,7 +402,7 @@ export default function NuevaVenta() {
         cambio: cambioVal,
       });
 
-      // 4. Sincronizar Stock en Backend pasando el nuevo Stock absoluto
+      // 4. Sincronizar Stock
       for (const l of lineas) {
         const idLimpio = Number(l.id_planta);
         if (!idLimpio) continue;
@@ -326,27 +410,44 @@ export default function NuevaVenta() {
         const planta = plantas.find((p) => Number(p.id) === idLimpio);
         if (planta) {
           const nuevoStock = Number(planta.cantidad) - Number(l.cantidad);
-          // Modificado: pasamos el id y la propiedad envuelta tal cual espera tu endpoint PATCH
           await PlantaService.updateStock(idLimpio, nuevoStock);
         }
       }
 
-      // Preparar el mapeo con nombres legibles para los PDF antes del reset del formulario
+      // Preparar detalles con nombres para PDF
       const detallesConNombre = detalles.map((d) => ({
         ...d,
         nombre_planta: plantas.find((p) => p.id === d.id_planta)?.nombre || `#${d.id_planta}`,
       }));
       
-      // Seteamos los estados que consumirá el Dialog modal de éxito
-      const ventaDefinitiva = { ...venta, id: idVentaGenerada };
+      const ventaDefinitiva = { ...venta, id: idVentaGenerada, nota_remision: venta.nota_remision };
       setVentaCreada(ventaDefinitiva);
       setDetallesCreados(detallesConNombre);
+      
+      // Generar ticket para mostrar en modal emergente
+      const pagosParaTicket = [{
+        fecha: new Date().toISOString(),
+        tipo: esAnticipo ? "anticipo" : "pago_completo",
+        forma_pago: formaPago,
+        monto: montoPagadoVal,
+        nota: pagoNota
+      }];
+      
+      const docTicket = generarTicketPDF({
+        venta: ventaDefinitiva,
+        detalles: detallesConNombre,
+        pagos: pagosParaTicket,
+        vendedor: user?.nombre || "Admin"
+      });
+      setTicketData(docTicket.output("datauristring"));
+      
       setPostDialog(true);
+      setTicketDialogOpen(true);  // Abrir el ticket emergente
 
       const mensajeExito = `Venta #${idVentaGenerada} registrada — $${total.toFixed(2)} (${tipoVenta})`;
       setSuccess(mensajeExito);
 
-      // 5. Reset del Formulario de forma segura
+      // Reset del Formulario
       setLineas([{ ...EMPTY_LINE }]);
       setNotaRemision("");
       setObservaciones("");
@@ -358,7 +459,6 @@ export default function NuevaVenta() {
       setMontoPagado("");
       setErrores({});
 
-      // Refrescar el inventario local para reflejar el stock disminuido
       const updated = await PlantaService.getAll();
       setPlantas(updated);
     } catch (e) {
@@ -415,7 +515,11 @@ export default function NuevaVenta() {
                 <TextField 
                   label="Teléfono" 
                   value={clienteTelefono} 
-                  onChange={(e) => { setClienteTelefono(e.target.value); setErrores(p => ({...p, telefono: ""})); }} 
+                  onChange={(e) => { 
+                    setClienteTelefono(e.target.value); 
+                    validarCampoEnTiempoReal('telefono', e.target.value);
+                  }} 
+                  onBlur={(e) => validarCampoEnTiempoReal('telefono', e.target.value)}
                   placeholder="7121234567" 
                   error={!!errores.telefono}
                   helperText={errores.telefono}
@@ -425,7 +529,11 @@ export default function NuevaVenta() {
                 <TextField 
                   label="Email" 
                   value={clienteEmail} 
-                  onChange={(e) => { setClienteEmail(e.target.value); setErrores(p => ({...p, email: ""})); }} 
+                  onChange={(e) => { 
+                    setClienteEmail(e.target.value); 
+                    validarCampoEnTiempoReal('email', e.target.value);
+                  }} 
+                  onBlur={(e) => validarCampoEnTiempoReal('email', e.target.value)}
                   placeholder="cliente@correo.com" 
                   error={!!errores.email}
                   helperText={errores.email}
@@ -542,7 +650,11 @@ export default function NuevaVenta() {
                     label="Monto recibido" 
                     type="number" 
                     value={montoPagado} 
-                    onChange={(e) => { setMontoPagado(e.target.value); setErrores(p => ({...p, montoPagado: ""})); }} 
+                    onChange={(e) => { 
+                      setMontoPagado(e.target.value); 
+                      validarCampoEnTiempoReal('montoPagado', e.target.value);
+                    }} 
+                    onBlur={(e) => validarCampoEnTiempoReal('montoPagado', e.target.value)}
                     size="small" 
                     error={!!errores.montoPagado}
                     helperText={errores.montoPagado}
@@ -550,7 +662,17 @@ export default function NuevaVenta() {
                     InputProps={{ startAdornment: <Typography sx={{ mr: 0.5, color: "text.secondary", fontSize: 14 }}>$</Typography> }} 
                   />
                 )}
-                <TextField label="Nota de Remisión" value={notaRemision} onChange={(e) => setNotaRemision(e.target.value)} placeholder="Ej: NR-002" size="small" sx={{ minWidth: 150 }} />
+                
+                {/* Nota de Remisión - Solo lectura, se genera automáticamente */}
+                <TextField 
+                  label="Nota de Remisión" 
+                  value="Se genera automáticamente" 
+                  disabled
+                  size="small" 
+                  sx={{ minWidth: 180 }}
+                  InputProps={{ readOnly: true }}
+                />
+                
                 <TextField label="Observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} size="small" sx={{ flex: 1, minWidth: 200 }} />
               </Box>
 
@@ -565,7 +687,11 @@ export default function NuevaVenta() {
                       label="Monto del anticipo" 
                       type="number" 
                       value={montoAnticipo} 
-                      onChange={(e) => { setMontoAnticipo(e.target.value); setErrores(p => ({...p, anticipo: ""})); }} 
+                      onChange={(e) => { 
+                        setMontoAnticipo(e.target.value); 
+                        validarCampoEnTiempoReal('montoAnticipo', e.target.value);
+                      }} 
+                      onBlur={(e) => validarCampoEnTiempoReal('montoAnticipo', e.target.value)}
                       size="small" 
                       error={!!errores.anticipo}
                       helperText={errores.anticipo}
@@ -646,6 +772,7 @@ export default function NuevaVenta() {
         </Grid2>
       </Grid2>
 
+      {/* Diálogo de éxito post-venta */}
       <Dialog open={postDialog} onClose={() => setPostDialog(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ textAlign: "center", pb: 1 }}>
           <Receipt sx={{ fontSize: 40, color: "success.main", mb: 1 }} />
@@ -653,7 +780,7 @@ export default function NuevaVenta() {
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" textAlign="center" color="text.secondary" sx={{ mb: 3 }}>
-            ¿Qué deseas hacer con el comprobante de la Venta #{ventaCreada?.id}?
+            Venta #{ventaCreada?.id} - Nota: {ventaCreada?.nota_remision}
           </Typography>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
             <Button variant="outlined" startIcon={<PictureAsPdf />} onClick={handleDescargarTicket} fullWidth>
@@ -671,6 +798,61 @@ export default function NuevaVenta() {
         </DialogContent>
         <DialogActions sx={{ justifyContent: "center", pb: 2 }}>
           <Button onClick={() => setPostDialog(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo para mostrar ticket emergente al crear venta */}
+      <Dialog
+        open={ticketDialogOpen}
+        onClose={() => setTicketDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ textAlign: "center" }}>
+          <Receipt sx={{ fontSize: 40, color: "success.main", mb: 1 }} />
+          <Typography variant="h6">Ticket de Venta #{ventaCreada?.id}</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Nota: {ventaCreada?.nota_remision}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ bgcolor: "background.paper", borderRadius: 1, p: 0.5, overflow: "hidden" }}>
+            <iframe 
+              title="Ticket Preview" 
+              src={`${ticketData}#toolbar=0&navpanes=0&statusbar=0`} 
+              width="100%" 
+              height="450px" 
+              style={{ border: "none" }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "center", gap: 2, pb: 2, flexWrap: "wrap" }}>
+          <Button 
+            variant="outlined" 
+            startIcon={<Receipt />} 
+            onClick={handleDescargarTicket}
+          >
+            Descargar Ticket
+          </Button>
+          <Button 
+            variant="outlined" 
+            startIcon={<PictureAsPdf />} 
+            onClick={handleDescargarFactura}
+            color="success"
+          >
+            Descargar Factura
+          </Button>
+          {ventaCreada?.cliente_email && (
+            <Button 
+              variant="outlined" 
+              startIcon={<Email />} 
+              onClick={handleEnviarCorreo}
+              color="info"
+            >
+              Enviar por Correo
+            </Button>
+          )}
+          <Button onClick={() => setTicketDialogOpen(false)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
     </Box>
