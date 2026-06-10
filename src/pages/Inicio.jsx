@@ -6,21 +6,20 @@ import {
 } from '@mui/material'
 import { Yard, ShoppingCart, History, AddCircleOutline, ArrowForwardIos, Science } from '@mui/icons-material'
 import { useAuth } from '../auth/AuthContext'
-import { useNavigate } from 'react-router-dom' // <-- Para la navegación
+import { useNavigate } from 'react-router-dom'
 import PlantaService from '../services/PlantaService'
 import VentaService from '../services/VentaService'
 import AbonoService from '../services/AbonoService'
 
 export default function Inicio() {
   const { user } = useAuth()
-  const navigate = useNavigate() // <-- Hook de navegación
+  const navigate = useNavigate()
 
   const [stats, setStats] = useState({ plantas: 0, totalPlantas: 0, ventas: 0, totalVentas: 0, abonos: 0 })
   
-  // Estados para los bloques de información detallada (Top 3)
   const [recientesPlantas, setRecientesPlantas] = useState([])
   const [recientesVentas, setRecientesVentas] = useState([])
-  const [recientesAbonos, setRecientesAbonos] = useState([])
+  const [recientesAbonos, setRecientesAbonos] = useState([])  // Ahora son fertilizantes
 
   useEffect(() => {
     const load = async () => {
@@ -28,10 +27,9 @@ export default function Inicio() {
         const [plantas, ventas, abonos] = await Promise.all([
           PlantaService.getAll().catch(() => []),
           VentaService.getAll().catch(() => []),
-          AbonoService.getAll().catch(() => []),
+          AbonoService.getAll().catch(() => []),  // Esto obtiene los fertilizantes
         ])
         
-        // 1. Estadísticas globales para las tarjetas
         setStats({
           plantas: plantas ? plantas.length : 0,
           totalPlantas: (plantas || []).reduce((s, p) => s + (Number(p.stock || p.cantidad) || 0), 0),
@@ -40,10 +38,9 @@ export default function Inicio() {
           abonos: abonos ? abonos.length : 0,
         })
 
-        // 2. Extraer los últimos 3 registros (.reverse() pone los más nuevos primero)
         setRecientesPlantas([...plantas].reverse().slice(0, 3))
         setRecientesVentas([...ventas].reverse().slice(0, 3))
-        setRecientesAbonos([...abonos].reverse().slice(0, 3))
+        setRecientesAbonos([...abonos].reverse().slice(0, 3))  // Fertilizantes recientes
 
       } catch (err) {
         console.error('Error cargando estadísticas:', err)
@@ -52,7 +49,6 @@ export default function Inicio() {
     load()
   }, [])
 
-  // Definición de tus tarjetas con la propiedad 'path' añadida para saber a dónde ir al dar click
   const cards = [
     { 
       label: 'Tipos de Plantas', 
@@ -60,7 +56,7 @@ export default function Inicio() {
       sub: `${stats.totalPlantas.toLocaleString()} unidades en stock`, 
       icon: <Yard />, 
       color: '#2E7D32',
-      path: '/plantas' 
+      path: '/inventario' 
     },
     { 
       label: 'Ventas Registradas', 
@@ -71,12 +67,12 @@ export default function Inicio() {
       path: '/ventas' 
     },
     { 
-      label: 'Abonos', 
+      label: 'Fertilizantes', 
       value: stats.abonos, 
-      sub: 'Revisar saldos', 
+      sub: 'Productos disponibles', 
       icon: <Science />, 
       color: '#8D6E63',
-      path: '/ventas?filtro=con_anticipo' // Manda al historial con filtro de anticipos
+      path: '/abonos'  // Cambiado a la página de fertilizantes
     },
   ]
 
@@ -85,7 +81,7 @@ export default function Inicio() {
   const formatFecha = (f) => {
     if (!f) return '—'
     const d = new Date(f)
-    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   }
 
   return (
@@ -97,12 +93,11 @@ export default function Inicio() {
         Panel de control del Vivero Invergil
       </Typography>
 
-      {/* --- SECCIÓN 1: TARJETAS INTERACTIVAS --- */}
+      {/* SECCIÓN 1: TARJETAS INTERACTIVAS */}
       <Grid container spacing={3} sx={{ mb: 5 }}>
         {cards.map((c) => (
           <Grid item xs={12} sm={6} md={4} key={c.label}>
             <Card sx={{ position: 'relative', overflow: 'hidden', borderRadius: 3, boxShadow: 2 }}>
-              {/* CardActionArea hace que toda la tarjeta sea cliqueable con un efecto visual limpio */}
               <CardActionArea onClick={() => navigate(c.path)}>
                 <Box sx={{
                   position: 'absolute', top: -10, right: -10, width: 80, height: 80,
@@ -122,7 +117,7 @@ export default function Inicio() {
                     </Typography>
                   </Box>
                   <Typography variant="h4" fontWeight={700} color={c.color}>
-                    {c.label === 'Ventas Registradas' ? stats.ventas : c.value}
+                    {c.value}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     {c.sub} <ArrowForwardIos sx={{ fontSize: 10, color: 'text.disabled', ml: 'auto' }} />
@@ -134,10 +129,10 @@ export default function Inicio() {
         ))}
       </Grid>
 
-      {/* --- SECCIÓN 2: DETALLES EXTRA (TABLAS Y LISTAS RECIENTES) --- */}
+      {/* SECCIÓN 2: DETALLES EXTRA */}
       <Grid container spacing={4}>
         
-        {/* Columna Izquierda: Ventas y Abonos */}
+        {/* Columna Izquierda: Ventas y Fertilizantes */}
         <Grid item xs={12} md={8}>
           
           {/* Tabla Resumen Ventas */}
@@ -182,35 +177,49 @@ export default function Inicio() {
             </TableContainer>
           </Paper>
 
-          {/* Tabla Resumen Abonos */}
+          {/* Tabla Resumen Fertilizantes (corregida) */}
           <Paper sx={{ p: 3, borderRadius: 3, boxShadow: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <History sx={{ color: '#8D6E63' }} />
-              <Typography variant="h6" fontWeight={600}>Últimos 3 Abonos</Typography>
+              <Science sx={{ color: '#8D6E63' }} />
+              <Typography variant="h6" fontWeight={600}>Últimos Fertilizantes Agregados</Typography>
             </Box>
             <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'grey.50' } }}>
-                    <TableCell>Fecha</TableCell>
-                    <TableCell>Venta</TableCell>
-                    <TableCell>Forma</TableCell>
-                    <TableCell>Nota</TableCell>
-                    <TableCell align="right">Monto</TableCell>
+                    <TableCell>Nombre</TableCell>
+                    <TableCell>Uso</TableCell>
+                    <TableCell align="right">Cantidad</TableCell>
+                    <TableCell>Fecha Registro</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {recientesAbonos.map((p) => (
-                    <TableRow key={p.id} hover>
-                      <TableCell>{formatFecha(p.fecha)}</TableCell>
-                      <TableCell>#{p.id_venta}</TableCell>
-                      <TableCell sx={{ textTransform: 'capitalize' }}>{p.forma_pago}</TableCell>
-                      <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>{p.nota || 'Abono regular'}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 600, color: 'success.main' }}>{formatMoneda(p.monto)}</TableCell>
+                  {recientesAbonos.map((item) => (
+                    <TableRow key={item.id} hover>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Science sx={{ color: 'success.main', fontSize: 18 }} />
+                          <Typography variant="body2" fontWeight={500}>{item.nombre}</Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>{item.uso || '—'}</TableCell>
+                      <TableCell align="right">
+                        <Chip
+                          label={`${item.cantidad} ${item.cantidad === 1 ? 'unidad' : 'unidades'}`}
+                          size="small"
+                          color={item.cantidad < 5 ? 'error' : 'info'}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" color="text.secondary">
+                          {formatFecha(item.created_at)}
+                        </Typography>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {recientesAbonos.length === 0 && (
-                    <TableRow><TableCell colSpan={5} align="center">No se han registrado abonos aún</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} align="center">No hay fertilizantes registrados aún</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
@@ -238,12 +247,12 @@ export default function Inicio() {
                     <Yard sx={{ color: '#2E7D32', mr: 2, fontSize: 24 }} />
                     <ListItemText
                       primary={planta.nombre}
-                      secondary={`Stock: ${planta.stock || planta.cantidad || 0} pzas`}
+                      secondary={`Stock: ${planta.cantidad || 0} pzas`}
                       primaryTypographyProps={{ fontWeight: 600, variant: 'body2' }}
                     />
                     <Box sx={{ textAlign: 'right' }}>
                       <Typography variant="body2" fontWeight={700}>
-                        {formatMoneda(planta.precio_menudeo || planta.precio || 0)}
+                        {formatMoneda(planta.precio || 0)}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         ID: #{planta.id}
