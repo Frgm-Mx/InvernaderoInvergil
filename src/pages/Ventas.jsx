@@ -573,7 +573,7 @@ export default function Ventas() {
                   Total: ${Number(ventaSel?.total || 0).toFixed(2)}
                 </Typography>
 
-                {/* Mostrar Pagó y Cambio */}
+                {/* Mostrar Pagó y Cambio (para ventas pagadas) */}
                 <Box sx={{ textAlign: "right", mt: 1 }}>
                   <Typography variant="body2">
                     Pagó: ${Number(ventaSel?.monto_pagado || 0).toFixed(2)}
@@ -595,9 +595,17 @@ export default function Ventas() {
                 </Box>
 
                 {ventaSel && Number(ventaSel.saldo_pendiente || 0) > 0 && (
-                  <Box sx={{ textAlign: "right", mt: 1 }}>
+                  <Box
+                    sx={{
+                      textAlign: "right",
+                      mt: 1,
+                      pt: 1,
+                      borderTop: "1px dashed #ccc",
+                    }}
+                  >
                     <Typography variant="body2" color="warning.dark">
-                      Anticipo: ${Number(ventaSel.monto_pagado).toFixed(2)}
+                      Anticipo pagado: $
+                      {Number(ventaSel.monto_pagado).toFixed(2)}
                     </Typography>
                     <Typography variant="body2" color="error" fontWeight={700}>
                       Saldo pendiente: $

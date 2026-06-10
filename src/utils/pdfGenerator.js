@@ -169,9 +169,15 @@ export function generarTicketPDF({ venta, detalles, pagos = [], vendedor = '' })
     doc.text(`$${Number(venta.total).toFixed(2)}`, W - margen, y, { align: 'right' })
     y += 4
 
+    // ✅ Mostrar Pagó (siempre)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7)
+    doc.text('Pagó:', margen, y)
+    doc.text(`$${Number(venta.monto_pagado || 0).toFixed(2)}`, W - margen, y, { align: 'right' })
+    y += 3.5
+
+    // ✅ Mostrar Cambio (solo si aplica)
     if (cambioCalculado > 0) {
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(7)
       doc.text('Cambio:', margen, y)
       doc.text(`$${cambioCalculado.toFixed(2)}`, W - margen, y, { align: 'right' })
       y += 3.5
