@@ -210,10 +210,10 @@ export default function NuevaVenta() {
           const pagadoNum = Number(valor);
           if (valor && pagadoNum < total) {
             nuevosErrores.montoPagado = `Efectivo insuficiente. Faltan $${(total - pagadoNum).toFixed(2)}`;
-          } else if (valor && pagadoNum > total * 5) {
+          } /*else if (valor && pagadoNum > total * 5) {
             nuevosErrores.montoPagado =
               "El monto ingresado parece excesivo para el total de la orden";
-          } else {
+          }*/ else {
             delete nuevosErrores.montoPagado;
           }
         }
