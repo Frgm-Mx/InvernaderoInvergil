@@ -3,7 +3,7 @@ import {
   Box, Card, CardContent, Typography, TextField, Button, Alert, 
   IconButton, InputAdornment 
 } from '@mui/material'
-import { LockOutlined, Visibility, VisibilityOff } from '@mui/icons-material' // <-- Nuevos iconos
+import { LockOutlined, Visibility, VisibilityOff } from '@mui/icons-material'
 import { useAuth } from '../auth/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
@@ -15,13 +15,12 @@ export default function Login() {
   const [errores, setErrores] = useState({})
   const [errorGlobal, setErrorGlobal] = useState('')
   const [loading, setLoading] = useState(false)
-  
-  // 1. Estado para controlar si el texto de la contraseña es visible o no
   const [showPassword, setShowPassword] = useState(false)
 
+  // ✅ CAMBIADO: Redirigir a INICIO (/) en lugar de nueva-venta
   useEffect(() => {
     if (user) {
-      navigate('/nueva-venta')
+      navigate('/')  // ← Cambiado de '/nueva-venta' a '/'
     }
   }, [user, navigate])
 
@@ -31,7 +30,6 @@ export default function Login() {
     setErrorGlobal('')
   }
 
-  // Alternar el estado de visibilidad
   const handleClickShowPassword = () => setShowPassword((show) => !show)
 
   const validar = () => {
@@ -51,7 +49,8 @@ export default function Login() {
     setErrorGlobal('')
     try {
       await login(form.usuario.trim(), form.password)
-      navigate('/nueva-venta')
+      // ✅ CAMBIADO: Redirigir a INICIO (/) en lugar de nueva-venta
+      navigate('/')  // ← Cambiado de '/nueva-venta' a '/'
     } catch (err) {
       console.error(err)
       setErrorGlobal('Usuario o contraseña incorrectos')
@@ -115,21 +114,18 @@ export default function Login() {
               helperText={errores.usuario}
             />
             
-            {/* 2. Campo de contraseña modificado */}
             <TextField
               margin="normal"
               required
               fullWidth
               name="password"
               label="Contraseña"
-              // Si 'showPassword' es true, el tipo cambia a 'text' para revelar los caracteres
-              type={showPassword ? 'text' : 'password'} 
+              type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               value={form.password}
               onChange={handleChange}
               error={!!errores.password}
               helperText={errores.password}
-              // Agregamos el icono interactivo al final del input
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
