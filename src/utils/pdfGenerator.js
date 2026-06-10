@@ -109,6 +109,9 @@ export function generarTicketPDF({ venta, detalles, pagos = [], vendedor = '' })
 
   doc.setFontSize(7)
 
+  // Calcular cambio
+  const cambioCalculado = Number(venta.monto_pagado || 0) - Number(venta.total || 0);
+
   // Si tiene anticipo, mostrar desglose
   if (venta.anticipo > 0 || pagos.length > 1) {
     doc.setFont('helvetica', 'bold')
@@ -121,15 +124,11 @@ export function generarTicketPDF({ venta, detalles, pagos = [], vendedor = '' })
     doc.text(`$${Number(venta.monto_pagado || 0).toFixed(2)}`, W - margen, y, { align: 'right' })
     y += 3.2
 
-    if (cambio > 0) {
+    if (cambioCalculado > 0) {
       doc.text('Cambio:', margen, y)
-      doc.text(`$${cambio.toFixed(2)}`, W - margen, y, { align: 'right' })
+      doc.text(`$${cambioCalculado.toFixed(2)}`, W - margen, y, { align: 'right' })
       y += 3.2
     }
-
-    doc.text('Pagado:', margen, y)
-    doc.text(`$${Number(venta.monto_pagado || 0).toFixed(2)}`, W - margen, y, { align: 'right' })
-    y += 3.2
 
     const saldo = Number(venta.saldo_pendiente || 0)
     doc.setFont('helvetica', 'bold')
@@ -169,6 +168,15 @@ export function generarTicketPDF({ venta, detalles, pagos = [], vendedor = '' })
     doc.text('TOTAL:', margen, y)
     doc.text(`$${Number(venta.total).toFixed(2)}`, W - margen, y, { align: 'right' })
     y += 4
+
+    if (cambioCalculado > 0) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7)
+      doc.text('Cambio:', margen, y)
+      doc.text(`$${cambioCalculado.toFixed(2)}`, W - margen, y, { align: 'right' })
+      y += 3.5
+    }
+
     doc.setFontSize(7)
     doc.setFont('helvetica', 'normal')
     doc.text('Estado: PAGADA', W / 2, y, { align: 'center' })
