@@ -35,7 +35,7 @@ export function generarTicketPDF({ venta, detalles, pagos = [], vendedor = '' })
   doc.setFontSize(7)
   doc.text('Prop. Beatriz López Cárdenas', W / 2, y, { align: 'center' })
   y += 3
-  doc.text('San Felipe del Progreso, Estado de México', W / 2, y, { align: 'center' })
+  doc.text('San Lorenzo Tlacotepec, Estado de México', W / 2, y, { align: 'center' })
   y += 4
 
   // Línea separadora
@@ -220,7 +220,7 @@ export function generarFacturaPDF({ venta, detalles, pagos = [], vendedor = '' }
   y += 6
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
-  doc.text('Prop. Beatriz López Cárdenas · San Felipe del Progreso, Edo. de México', margen, y)
+  doc.text('Prop. Beatriz López Cárdenas · San Lorenzo Tlacotepec, Edo. de México', margen, y)
   y += 5
 
   // Número de factura en la esquina
@@ -389,7 +389,7 @@ export function generarFacturaPDF({ venta, detalles, pagos = [], vendedor = '' }
   doc.setFontSize(7)
   doc.setFont('helvetica', 'italic')
   doc.setTextColor(120)
-  doc.text('Vivero Invergil — Calidad en plantas de flor · San Felipe del Progreso, Estado de México', W / 2, pieY + 5, { align: 'center' })
+  doc.text('Vivero Invergil — Calidad en plantas de flor · San Lorenzo Tlacotepec, Estado de México', W / 2, pieY + 5, { align: 'center' })
   doc.text('Este documento es un comprobante de venta generado por el sistema.', W / 2, pieY + 9, { align: 'center' })
 
   return doc
