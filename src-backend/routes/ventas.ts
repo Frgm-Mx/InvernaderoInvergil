@@ -1,6 +1,8 @@
 import { Router } from 'express'
 import { AppDataSource } from '../database'
 import { Venta } from '../entities/Venta'
+import { Configuracion } from '../entities/Configuracion'  // ← Esta línea es la que falta
+
 
 const router = Router()
 const ventaRepo = AppDataSource.getRepository(Venta)
