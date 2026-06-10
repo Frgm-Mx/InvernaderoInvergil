@@ -17,7 +17,7 @@ const menuItems = [
   { text: 'Inventario', icon: <Yard />, path: '/inventario' },
   { text: 'Nueva Venta', icon: <ShoppingCart />, path: '/nueva-venta' },
   { text: 'Ventas', icon: <Receipt />, path: '/ventas' },
-  { text: 'Ganancias', icon: <Assessment />, path: '/ganancias' },
+  { text: 'Ganancias', icon: <Assessment />, path: '/ganancias', adminOnly: true }, 
   { text: 'Fertilizantes', icon: <Science />, path: '/abonos' },
   { text: 'Usuarios', icon: <People />, path: '/usuarios', adminOnly: true },
 ]
