@@ -6,6 +6,8 @@ import { DetalleVenta } from './entities/DetalleVenta'
 import { Abono } from './entities/Abono'
 import { PagoVenta } from './entities/PagoVenta'
 import dotenv from 'dotenv'
+import { Configuracion } from './entities/Configuracion' 
+
 
 dotenv.config()
 
@@ -25,7 +27,7 @@ export const AppDataSource = new DataSource({
   ),
   synchronize: true,
   logging: !isProduction,
-  entities: [Usuario, Planta, Venta, DetalleVenta, Abono, PagoVenta],
+  entities: [Usuario, Planta, Venta, DetalleVenta, Abono, PagoVenta, Configuracion],
   migrations: ['src-backend/migrations/**/*.ts'],
   ssl: isProduction ? { rejectUnauthorized: false } : false
 })
