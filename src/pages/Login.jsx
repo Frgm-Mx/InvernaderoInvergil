@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { 
   Box, Card, CardContent, Typography, TextField, Button, Alert, 
-  IconButton, InputAdornment 
+  IconButton, InputAdornment, CircularProgress
 } from '@mui/material'
 import { LockOutlined, Visibility, VisibilityOff } from '@mui/icons-material'
 import { useAuth } from '../auth/AuthContext'
@@ -17,10 +17,64 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
-  // ✅ CAMBIADO: Redirigir a INICIO (/) en lugar de nueva-venta
+  // Estados para intentos fallidos
+  const [intentos, setIntentos] = useState(0)
+  const [bloqueado, setBloqueado] = useState(false)
+  const [tiempoRestante, setTiempoRestante] = useState(0)
+  const MAX_INTENTOS = 5
+  const TIEMPO_BLOQUEO = 30 // segundos
+
+  // Cargar intentos guardados desde localStorage
+  useEffect(() => {
+    const savedIntentos = localStorage.getItem('login_intentos')
+    const savedBloqueado = localStorage.getItem('login_bloqueado')
+    const savedTiempo = localStorage.getItem('login_tiempo_bloqueo')
+    
+    if (savedIntentos) setIntentos(parseInt(savedIntentos))
+    
+    if (savedBloqueado === 'true' && savedTiempo) {
+      const tiempoRestanteCalc = Math.max(0, parseInt(savedTiempo) - Date.now())
+      if (tiempoRestanteCalc > 0) {
+        setBloqueado(true)
+        setTiempoRestante(Math.ceil(tiempoRestanteCalc / 1000))
+      } else {
+        // Limpiar bloqueo expirado
+        localStorage.removeItem('login_bloqueado')
+        localStorage.removeItem('login_tiempo_bloqueo')
+        setIntentos(0)
+      }
+    }
+  }, [])
+
+  // Timer para cuenta regresiva
+  useEffect(() => {
+    let interval
+    if (bloqueado && tiempoRestante > 0) {
+      interval = setInterval(() => {
+        setTiempoRestante(prev => {
+          if (prev <= 1) {
+            // Desbloquear cuando llegue a 0
+            setBloqueado(false)
+            setIntentos(0)
+            localStorage.removeItem('login_bloqueado')
+            localStorage.removeItem('login_tiempo_bloqueo')
+            localStorage.setItem('login_intentos', '0')
+            clearInterval(interval)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+    return () => clearInterval(interval)
+  }, [bloqueado, tiempoRestante])
+
   useEffect(() => {
     if (user) {
-      navigate('/')  // ← Cambiado de '/nueva-venta' a '/'
+      // Resetear intentos al iniciar sesión exitosamente
+      setIntentos(0)
+      localStorage.setItem('login_intentos', '0')
+      navigate('/')
     }
   }, [user, navigate])
 
@@ -41,19 +95,47 @@ export default function Login() {
     return Object.keys(err).length === 0
   }
 
+  const resetIntentos = () => {
+    setIntentos(0)
+    localStorage.setItem('login_intentos', '0')
+  }
+
+  const registrarIntentoFallido = () => {
+    const nuevosIntentos = intentos + 1
+    setIntentos(nuevosIntentos)
+    localStorage.setItem('login_intentos', nuevosIntentos.toString())
+    
+    if (nuevosIntentos >= MAX_INTENTOS) {
+      const tiempoBloqueoMs = TIEMPO_BLOQUEO * 1000
+      const finBloqueo = Date.now() + tiempoBloqueoMs
+      setBloqueado(true)
+      setTiempoRestante(TIEMPO_BLOQUEO)
+      localStorage.setItem('login_bloqueado', 'true')
+      localStorage.setItem('login_tiempo_bloqueo', finBloqueo.toString())
+      setErrorGlobal(`Demasiados intentos fallidos. Intente nuevamente en ${TIEMPO_BLOQUEO} segundos.`)
+    } else {
+      const intentosRestantes = MAX_INTENTOS - nuevosIntentos
+      setErrorGlobal(`Usuario o contraseña incorrectos. Le quedan ${intentosRestantes} intento${intentosRestantes !== 1 ? 's' : ''}.`)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!validar()) return
+    if (bloqueado) {
+      setErrorGlobal(`Cuenta bloqueada. Espere ${tiempoRestante} segundos para intentar nuevamente.`)
+      return
+    }
 
     setLoading(true)
     setErrorGlobal('')
     try {
       await login(form.usuario.trim(), form.password)
-      // ✅ CAMBIADO: Redirigir a INICIO (/) en lugar de nueva-venta
-      navigate('/')  // ← Cambiado de '/nueva-venta' a '/'
+      resetIntentos()
+      navigate('/')
     } catch (err) {
       console.error(err)
-      setErrorGlobal('Usuario o contraseña incorrectos')
+      registrarIntentoFallido()
     } finally {
       setLoading(false)
     }
@@ -99,6 +181,18 @@ export default function Login() {
             </Alert>
           )}
 
+          {bloqueado && (
+            <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+              ⏳ Cuenta temporalmente bloqueada. Espere {tiempoRestante} segundos.
+            </Alert>
+          )}
+
+          {intentos > 0 && intentos < MAX_INTENTOS && !bloqueado && (
+            <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+              🔐 Intentos restantes: {MAX_INTENTOS - intentos}
+            </Alert>
+          )}
+
           <Box component="form" onSubmit={handleSubmit} noValidate>
             <TextField
               margin="normal"
@@ -112,6 +206,7 @@ export default function Login() {
               onChange={handleChange}
               error={!!errores.usuario}
               helperText={errores.usuario}
+              disabled={bloqueado}
             />
             
             <TextField
@@ -126,6 +221,7 @@ export default function Login() {
               onChange={handleChange}
               error={!!errores.password}
               helperText={errores.password}
+              disabled={bloqueado}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -133,6 +229,7 @@ export default function Login() {
                       aria-label="cambiar visibilidad de contraseña"
                       onClick={handleClickShowPassword}
                       edge="end"
+                      disabled={bloqueado}
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
@@ -146,10 +243,10 @@ export default function Login() {
               fullWidth
               variant="contained"
               size="large"
-              disabled={loading}
+              disabled={loading || bloqueado}
               sx={{ mt: 3, mb: 1, py: 1.2, fontWeight: 600 }}
             >
-              {loading ? 'Accediendo...' : 'Ingresar'}
+              {loading ? <CircularProgress size={24} sx={{ color: 'white' }} /> : 'Ingresar'}
             </Button>
           </Box>
         </CardContent>
