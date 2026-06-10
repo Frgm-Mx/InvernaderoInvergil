@@ -47,7 +47,7 @@ import {
 const iframeStyle = {
   border: "none",
   borderRadius: "4px",
-  backgroundColor: "#fff"
+  backgroundColor: "#fff",
 };
 
 export default function Ventas() {
@@ -118,24 +118,24 @@ export default function Ventas() {
 
   const verDetalle = async (venta) => {
     const ventaId = venta.id;
-    
+
     setDetalles([]);
     setPagos([]);
     setVentaSel(null);
     setCargandoDetalle(true);
     setDetailOpen(true);
-    
+
     try {
       const [d, p] = await Promise.all([
         DetalleVentaService.getByVenta(ventaId),
         PagoVentaService.getByVenta(ventaId),
       ]);
-      
+
       setDetalles(d || []);
       setPagos(p || []);
       setVentaSel(venta);
     } catch (error) {
-      console.error('Error cargando detalles:', error);
+      console.error("Error cargando detalles:", error);
       setDetalles([]);
       setPagos([]);
     } finally {
@@ -147,25 +147,25 @@ export default function Ventas() {
     setVentaActual(venta);
     setCargandoTicket(true);
     setTicketPreviewOpen(true);
-    
+
     try {
       const [d, p] = await Promise.all([
         DetalleVentaService.getByVenta(venta.id),
         PagoVentaService.getByVenta(venta.id),
       ]);
-      
-      const detallesConNombre = d.map(det => ({
+
+      const detallesConNombre = d.map((det) => ({
         ...det,
-        nombre_planta: getNombrePlanta(det.id_planta)
+        nombre_planta: getNombrePlanta(det.id_planta),
       }));
-      
+
       const doc = generarTicketPDF({
         venta: venta,
         detalles: detallesConNombre,
         pagos: p,
-        vendedor: venta.id_usuario?.nombre || "Admin"
+        vendedor: venta.id_usuario?.nombre || "Admin",
       });
-      
+
       setTicketPreviewData(doc.output("datauristring"));
     } catch (error) {
       console.error("Error generando ticket:", error);
@@ -182,13 +182,18 @@ export default function Ventas() {
         DetalleVentaService.getByVenta(venta.id),
         PagoVentaService.getByVenta(venta.id),
       ]);
-      
-      const detallesConNombre = d.map(det => ({
+
+      const detallesConNombre = d.map((det) => ({
         ...det,
-        nombre_planta: getNombrePlanta(det.id_planta)
+        nombre_planta: getNombrePlanta(det.id_planta),
       }));
-      
-      await descargarFactura(venta, detallesConNombre, p, venta.id_usuario?.nombre || "Admin");
+
+      await descargarFactura(
+        venta,
+        detallesConNombre,
+        p,
+        venta.id_usuario?.nombre || "Admin",
+      );
     } catch (error) {
       console.error("Error:", error);
       alert("Error al generar la factura");
@@ -196,22 +201,22 @@ export default function Ventas() {
   };
 
   const getNombrePlanta = (planta) => {
-    if (planta && typeof planta === 'object') {
+    if (planta && typeof planta === "object") {
       if (planta.nombre) return planta.nombre;
       if (planta.id) {
-        const encontrada = plantas.find(p => p.id === planta.id);
+        const encontrada = plantas.find((p) => p.id === planta.id);
         return encontrada?.nombre || `Planta #${planta.id}`;
       }
     }
-    if (typeof planta === 'number') {
-      const encontrada = plantas.find(p => p.id === planta);
+    if (typeof planta === "number") {
+      const encontrada = plantas.find((p) => p.id === planta);
       return encontrada?.nombre || `Planta #${planta}`;
     }
     return `Planta desconocida`;
   };
 
   const formatFecha = (f) => {
-    if (!f) return '—';
+    if (!f) return "—";
     const d = new Date(f);
     return d.toLocaleDateString("es-MX", {
       day: "2-digit",
@@ -230,12 +235,22 @@ export default function Ventas() {
 
   const handleDescargarTicket = () => {
     if (ventaSel)
-      descargarTicket(ventaSel, getDetallesConNombre(), pagos, ventaSel.id_usuario?.nombre || "Admin");
+      descargarTicket(
+        ventaSel,
+        getDetallesConNombre(),
+        pagos,
+        ventaSel.id_usuario?.nombre || "Admin",
+      );
   };
 
   const handleDescargarFactura = () => {
     if (ventaSel)
-      descargarFactura(ventaSel, getDetallesConNombre(), pagos, ventaSel.id_usuario?.nombre || "Admin");
+      descargarFactura(
+        ventaSel,
+        getDetallesConNombre(),
+        pagos,
+        ventaSel.id_usuario?.nombre || "Admin",
+      );
   };
 
   const handleEnviarCorreo = () => {
@@ -420,14 +435,24 @@ export default function Ventas() {
                   </TableCell>
                   <TableCell>{v.nota_remision || "—"}</TableCell>
                   <TableCell align="center">
-                    <Box sx={{ display: "flex", gap: 0.5, justifyContent: "center" }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 0.5,
+                        justifyContent: "center",
+                      }}
+                    >
                       <Tooltip title="Ver Ticket">
                         <IconButton size="small" onClick={() => verTicket(v)}>
                           <Receipt fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Descargar Factura">
-                        <IconButton size="small" color="success" onClick={() => descargarFacturaDirecto(v)}>
+                        <IconButton
+                          size="small"
+                          color="success"
+                          onClick={() => descargarFacturaDirecto(v)}
+                        >
                           <PictureAsPdf fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -472,7 +497,7 @@ export default function Ventas() {
             }}
           >
             <Typography variant="h6">
-              {cargandoDetalle ? "Cargando..." : `Venta #${ventaSel?.id || ''}`}
+              {cargandoDetalle ? "Cargando..." : `Venta #${ventaSel?.id || ""}`}
             </Typography>
             {!cargandoDetalle && ventaSel && (
               <Chip
@@ -533,7 +558,7 @@ export default function Ventas() {
                 ))}
                 {detalles.length === 0 && !cargandoDetalle && (
                   <ListItem>
-                    <ListItemText 
+                    <ListItemText
                       primary="No hay productos en esta venta"
                       secondary="Puede que los detalles no se hayan cargado correctamente"
                     />
@@ -547,10 +572,32 @@ export default function Ventas() {
                 <Typography variant="h6" textAlign="right">
                   Total: ${Number(ventaSel?.total || 0).toFixed(2)}
                 </Typography>
+
+                {/* Mostrar Pagó y Cambio */}
+                <Box sx={{ textAlign: "right", mt: 1 }}>
+                  <Typography variant="body2">
+                    Pagó: ${Number(ventaSel?.monto_pagado || 0).toFixed(2)}
+                  </Typography>
+                  {Number(ventaSel?.monto_pagado || 0) -
+                    Number(ventaSel?.total || 0) >
+                    0 && (
+                    <Typography
+                      variant="body2"
+                      color="success.main"
+                      fontWeight={600}
+                    >
+                      Cambio: $
+                      {(
+                        Number(ventaSel.monto_pagado) - Number(ventaSel.total)
+                      ).toFixed(2)}
+                    </Typography>
+                  )}
+                </Box>
+
                 {ventaSel && Number(ventaSel.saldo_pendiente || 0) > 0 && (
-                  <Box sx={{ textAlign: "right" }}>
-                    <Typography variant="body2">
-                      Pagado: ${Number(ventaSel.monto_pagado).toFixed(2)}
+                  <Box sx={{ textAlign: "right", mt: 1 }}>
+                    <Typography variant="body2" color="warning.dark">
+                      Anticipo: ${Number(ventaSel.monto_pagado).toFixed(2)}
                     </Typography>
                     <Typography variant="body2" color="error" fontWeight={700}>
                       Saldo pendiente: $
@@ -649,7 +696,9 @@ export default function Ventas() {
       >
         <DialogTitle sx={{ textAlign: "center" }}>
           <Receipt sx={{ fontSize: 40, color: "success.main", mb: 1 }} />
-          <Typography variant="h6">Ticket - Venta #{ventaActual?.id}</Typography>
+          <Typography variant="h6">
+            Ticket - Venta #{ventaActual?.id}
+          </Typography>
           {ventaActual?.nota_remision && (
             <Typography variant="caption" color="text.secondary">
               Nota: {ventaActual.nota_remision}
@@ -662,21 +711,28 @@ export default function Ventas() {
               <Typography>Generando ticket...</Typography>
             </Box>
           ) : (
-            <Box sx={{ bgcolor: "background.paper", borderRadius: 1, p: 0.5, overflow: "hidden" }}>
-              <iframe 
-                title="Ticket Preview" 
-                src={`${ticketPreviewData}#toolbar=0&navpanes=0&statusbar=0`} 
-                width="100%" 
-                height="450px" 
+            <Box
+              sx={{
+                bgcolor: "background.paper",
+                borderRadius: 1,
+                p: 0.5,
+                overflow: "hidden",
+              }}
+            >
+              <iframe
+                title="Ticket Preview"
+                src={`${ticketPreviewData}#toolbar=0&navpanes=0&statusbar=0`}
+                width="100%"
+                height="450px"
                 style={iframeStyle}
               />
             </Box>
           )}
         </DialogContent>
         <DialogActions sx={{ justifyContent: "center", gap: 2, pb: 2 }}>
-          <Button 
-            variant="outlined" 
-            startIcon={<PictureAsPdf />} 
+          <Button
+            variant="outlined"
+            startIcon={<PictureAsPdf />}
             onClick={() => {
               if (ventaActual) {
                 descargarFacturaDirecto(ventaActual);
@@ -686,24 +742,35 @@ export default function Ventas() {
           >
             Descargar Factura
           </Button>
-          <Button 
-            variant="outlined" 
-            startIcon={<Receipt />} 
+          <Button
+            variant="outlined"
+            startIcon={<Receipt />}
             onClick={() => {
               if (ventaActual) {
-                descargarTicket(ventaActual, getDetallesConNombre(), pagos, ventaActual.id_usuario?.nombre || "Admin");
+                descargarTicket(
+                  ventaActual,
+                  getDetallesConNombre(),
+                  pagos,
+                  ventaActual.id_usuario?.nombre || "Admin",
+                );
               }
             }}
           >
             Descargar Ticket
           </Button>
           {ventaActual?.cliente_email && (
-            <Button 
-              variant="outlined" 
-              startIcon={<Email />} 
+            <Button
+              variant="outlined"
+              startIcon={<Email />}
               onClick={() => {
                 if (ventaActual) {
-                  enviarPorCorreo(ventaActual, getDetallesConNombre(), pagos, ventaActual.id_usuario?.nombre || "Admin", ventaActual.cliente_email);
+                  enviarPorCorreo(
+                    ventaActual,
+                    getDetallesConNombre(),
+                    pagos,
+                    ventaActual.id_usuario?.nombre || "Admin",
+                    ventaActual.cliente_email,
+                  );
                 }
               }}
               color="info"
