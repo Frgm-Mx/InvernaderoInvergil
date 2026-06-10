@@ -441,7 +441,7 @@ export default function NuevaVenta() {
       });
       setTicketData(docTicket.output("datauristring"));
       
-      setPostDialog(true);
+      //setPostDialog(true);
       setTicketDialogOpen(true);  // Abrir el ticket emergente
 
       const mensajeExito = `Venta #${idVentaGenerada} registrada — $${total.toFixed(2)} (${tipoVenta})`;
@@ -772,34 +772,6 @@ export default function NuevaVenta() {
         </Grid2>
       </Grid2>
 
-      {/* Diálogo de éxito post-venta */}
-      <Dialog open={postDialog} onClose={() => setPostDialog(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ textAlign: "center", pb: 1 }}>
-          <Receipt sx={{ fontSize: 40, color: "success.main", mb: 1 }} />
-          <Typography variant="h6">Venta registrada con éxito</Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" textAlign="center" color="text.secondary" sx={{ mb: 3 }}>
-            Venta #{ventaCreada?.id} - Nota: {ventaCreada?.nota_remision}
-          </Typography>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-            <Button variant="outlined" startIcon={<PictureAsPdf />} onClick={handleDescargarTicket} fullWidth>
-              Descargar Ticket (formato mini)
-            </Button>
-            <Button variant="outlined" startIcon={<PictureAsPdf />} onClick={handleDescargarFactura} fullWidth color="success">
-              Descargar Factura (carta)
-            </Button>
-            {ventaCreada?.cliente_email && (
-              <Button variant="outlined" startIcon={<Email />} onClick={handleEnviarCorreo} fullWidth color="info">
-                Enviar por correo electrónico
-              </Button>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: "center", pb: 2 }}>
-          <Button onClick={() => setPostDialog(false)}>Cerrar</Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Diálogo para mostrar ticket emergente al crear venta */}
       <Dialog
