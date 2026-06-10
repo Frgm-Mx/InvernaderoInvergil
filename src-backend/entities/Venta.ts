@@ -2,6 +2,8 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColum
 import { Usuario } from './Usuario'
 import { DetalleVenta } from './DetalleVenta'
 import { PagoVenta } from './PagoVenta'
+import { Configuracion } from '../entities/Configuracion' 
+
 
 @Entity('ventas')
 export class Venta {

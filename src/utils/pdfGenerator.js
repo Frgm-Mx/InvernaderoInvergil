@@ -305,11 +305,18 @@ export function generarFacturaPDF({ venta, detalles, pagos = [], vendedor = '' }
   const totX = W - margen - 70
   doc.setFontSize(9)
 
-  if (venta.anticipo > 0 || venta.saldo_pendiente > 0) {
+  const totalVenta = Number(venta.total || 0)
+  const montoPagado = Number(venta.monto_pagado || 0)
+  const anticipo = Number(venta.anticipo || 0)
+  const saldoPendiente = Number(venta.saldo_pendiente || 0)
+  const cambioCalculado = montoPagado - totalVenta
+
+  if (saldoPendiente > 0) {
+    // Venta con anticipo
     const filas = [
-      ['Subtotal:', `$${Number(venta.total).toFixed(2)}`],
-      ['Anticipo:', `$${Number(venta.anticipo || 0).toFixed(2)}`],
-      ['Total pagado:', `$${Number(venta.monto_pagado || 0).toFixed(2)}`],
+      ['Subtotal:', `$${totalVenta.toFixed(2)}`],
+      ['Anticipo:', `$${anticipo.toFixed(2)}`],
+      ['Total pagado:', `$${montoPagado.toFixed(2)}`],
     ]
     filas.forEach(([label, val]) => {
       doc.setFont('helvetica', 'normal')
@@ -320,24 +327,38 @@ export function generarFacturaPDF({ venta, detalles, pagos = [], vendedor = '' }
 
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(11)
-    const saldo = Number(venta.saldo_pendiente || 0)
-    if (saldo > 0) doc.setTextColor(211, 47, 47)
-    else doc.setTextColor(46, 125, 50)
+    doc.setTextColor(211, 47, 47)
     doc.text('SALDO PENDIENTE:', totX, y)
-    doc.text(`$${saldo.toFixed(2)}`, W - margen, y, { align: 'right' })
+    doc.text(`$${saldoPendiente.toFixed(2)}`, W - margen, y, { align: 'right' })
     doc.setTextColor(0)
     y += 5
 
     doc.setFontSize(8)
     doc.setFont('helvetica', 'italic')
-    doc.text(`Estado: ${venta.estado === 'pagada' ? 'PAGADA' : 'CON ANTICIPO'}`, totX, y)
+    doc.text('Estado: CON ANTICIPO', totX, y)
     y += 8
   } else {
+    // Venta pagada completamente
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(12)
     doc.text('TOTAL:', totX, y)
-    doc.text(`$${Number(venta.total).toFixed(2)}`, W - margen, y, { align: 'right' })
+    doc.text(`$${totalVenta.toFixed(2)}`, W - margen, y, { align: 'right' })
     y += 5
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.text('Pagó:', totX, y)
+    doc.text(`$${montoPagado.toFixed(2)}`, W - margen, y, { align: 'right' })
+    y += 5
+
+    if (cambioCalculado > 0) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      doc.text('Cambio:', totX, y)
+      doc.text(`$${cambioCalculado.toFixed(2)}`, W - margen, y, { align: 'right' })
+      y += 5
+    }
+
     doc.setFontSize(8)
     doc.setFont('helvetica', 'italic')
     doc.setTextColor(46, 125, 50)
