@@ -5,7 +5,7 @@ Tecnológico Superior de San Felipe del Progreso
 
 ## Descripción
 
-Aplicación web para el control de inventario, ventas y abonos del vivero "Invergil", propiedad de Beatriz López Cárdenas. Funciona de forma local (sin internet) en dispositivos móviles y de escritorio.
+Aplicación web para el control de inventario, ventas y abonos del vivero "Invergil". Funciona de forma local (sin internet) en dispositivos móviles y de escritorio.
 
 ## Stack Tecnológico
 
